@@ -1,0 +1,1191 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>주류 재고관리</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;background:#f5f5f3;color:#1a1a1a;font-size:15px}
+.app{max-width:900px;margin:0 auto;padding:16px}
+header{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid #e0e0d8}
+header h1{font-size:20px;font-weight:600}
+header .sub{font-size:12px;color:#888;margin-top:2px}
+.cat-switch{display:flex;background:#e8e8e0;border-radius:10px;padding:3px;margin-bottom:16px;width:fit-content}
+.cat-btn{padding:7px 28px;border-radius:8px;font-size:14px;font-weight:500;border:none;background:none;color:#888;cursor:pointer;transition:all .15s}
+.cat-btn.active{background:#fff;color:#1a1a1a;box-shadow:0 1px 4px rgba(0,0,0,.1)}
+.tabs{display:flex;gap:3px;margin-bottom:16px;border-bottom:1px solid #e0e0d8;flex-wrap:wrap}
+.tab{padding:8px 12px;font-size:13px;font-weight:500;border:none;background:none;color:#888;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+.tab:hover{color:#333}
+.tab.active{color:#1a1a1a;border-bottom-color:#1a1a1a}
+.section{display:none}.section.active{display:block}
+.card{background:#fff;border:1px solid #e8e8e0;border-radius:12px;padding:18px;margin-bottom:14px}
+.stat-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(95px,1fr));gap:8px;margin-bottom:14px}
+.stat{background:#f5f5f3;border-radius:8px;padding:10px 12px;text-align:center}
+.stat-label{font-size:11px;color:#888;margin-bottom:4px}
+.stat-val{font-size:20px;font-weight:600;color:#1a1a1a}
+.section-title{font-size:15px;font-weight:600;margin-bottom:4px}
+.section-sub{font-size:12px;color:#888;margin-bottom:12px}
+label{font-size:13px;color:#666;display:block;margin-bottom:4px}
+select,input[type=number],input[type=text],input[type=date],input[type=month]{width:100%;padding:8px 10px;font-size:14px;border:1px solid #d0d0c8;border-radius:8px;background:#fff;color:#1a1a1a;font-family:inherit}
+select:focus,input:focus{outline:none;border-color:#888}
+.btn{padding:8px 16px;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;border:1px solid #d0d0c8;background:#f0f0e8;color:#1a1a1a;font-family:inherit;white-space:nowrap}
+.btn:hover{background:#e8e8e0}
+.btn-primary{background:#1a1a1a;color:#fff;border-color:#1a1a1a}
+.btn-primary:hover{background:#333}
+.btn-sm{padding:5px 12px;font-size:12px}
+.btn-danger{color:#c0392b;border-color:#e8b4b0}
+.btn-danger:hover{background:#fdf0ef}
+.btn-active{background:#e8f0fd;color:#1a5ccf;border-color:#b8d0f8}
+.table-wrap{overflow-x:auto}
+table{width:100%;font-size:13px;border-collapse:collapse}
+th{text-align:left;padding:8px 10px;font-weight:500;font-size:12px;color:#888;border-bottom:1px solid #e8e8e0;white-space:nowrap}
+td{padding:9px 10px;border-bottom:1px solid #f0f0e8;color:#1a1a1a;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:#fafaf8}
+.badge{display:inline-block;padding:2px 9px;border-radius:999px;font-size:11px;font-weight:500}
+.badge-ok{background:#e8f8ee;color:#1a7a3c}
+.badge-low{background:#fff8e8;color:#b07a00}
+.badge-out{background:#fdecea;color:#c0392b}
+.msg{font-size:13px;color:#aaa;text-align:center;padding:24px}
+.tag{display:inline-block;padding:2px 9px;border-radius:6px;font-size:11px;font-weight:500;white-space:nowrap}
+.tag-transfer{background:#e8f0fd;color:#1a5ccf}
+.tag-direct{background:#f0e8fd;color:#7a1ab0}
+.tag-sell{background:#e8f8ee;color:#1a7a3c}
+.tag-buy{background:#e8f0fd;color:#1a5ccf}
+.tag-etc{background:#f0f0f0;color:#666;border:1px solid #e0e0e0}
+.setting-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #f0f0e8}
+.setting-row:last-child{border-bottom:none}
+.product-row{display:flex;align-items:center;gap:8px;padding:10px 0;border-bottom:1px solid #f0f0e8}
+.product-row:last-child{border-bottom:none}
+.reason-wrap{display:flex;gap:6px}
+.reason-wrap select,.reason-wrap input{flex:1}
+.preset-btns{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.filter-note{font-size:12px;color:#888;margin-top:8px}
+.form-2col{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px}
+.form-2col-submit{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:flex-end}
+.form-3col{display:grid;grid-template-columns:2fr 1fr auto;gap:8px;align-items:flex-end}
+.modal-bg{display:none !important;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:100;align-items:center;justify-content:center}
+.modal-bg.open{display:flex !important}
+@media(min-width:600px){
+  .form-2col{grid-template-columns:2fr 1fr 1fr auto;margin-bottom:0}
+  .form-2col-submit{display:contents}
+  .form-3col{grid-template-columns:2fr 1fr auto}
+}
+.modal-box{background:#fff;border-radius:14px;padding:22px;width:340px;box-shadow:0 8px 32px rgba(0,0,0,.15)}
+#toast{display:none;position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1a1a;color:#fff;padding:11px 22px;border-radius:8px;font-size:13px;z-index:200;white-space:nowrap}
+</style>
+</head>
+<body>
+<div class="app">
+
+<header>
+  <div>
+    <h1>주류 재고관리</h1>
+    <div class="sub" id="header-sub"></div>
+  </div>
+  <button class="btn btn-primary" onclick="openModal('product')">+ 품목 등록</button>
+</header>
+<div id="sync-status" style="font-size:12px;color:#aaa;margin-bottom:12px;text-align:right">☁️ 클라우드 연결 중...</div>
+
+<div class="cat-switch">
+  <button class="cat-btn active" id="cat-whiskey" onclick="switchCat('whiskey')">🥃 위스키</button>
+  <button class="cat-btn" id="cat-beer" onclick="switchCat('beer')">🍺 비어</button>
+</div>
+
+<div class="tabs" id="main-tabs">
+  <!-- JS로 동적 생성 -->
+</div>
+
+<!-- 탭 컨텐츠 -->
+<div id="tab-contents"></div>
+
+<!-- 이동 내역 -->
+<div id="tab-transfer" class="section">
+  <div class="card">
+    <div class="section-title">이동 기록</div>
+    <div class="section-sub">출발지 → 목적지 선택 (C4 포함 모든 장소 간 이동 가능)</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">
+      <div><label>품목</label><select id="tr-p"></select></div>
+      <div><label>날짜</label><input type="date" id="tr-date"/></div>
+      <div><label>출발지</label><select id="tr-from"></select></div>
+      <div><label>목적지</label><select id="tr-to"></select></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:flex-end">
+      <div><label>수량</label><input type="number" id="tr-q" min="1" placeholder="0"/></div>
+      <button class="btn btn-primary" style="height:38px" onclick="doTransfer()">이동</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="section-title">전체 이동·소진 내역</div>
+    <div class="section-sub">수정·삭제로 오기입 정정 가능</div>
+    <div class="table-wrap" style="max-height:500px;overflow:auto"><table>
+      <thead><tr>
+        <th style="position:sticky;top:0;background:#f5f5f3;z-index:2">날짜</th>
+        <th style="position:sticky;top:0;background:#f5f5f3;z-index:2">품목</th>
+        <th style="position:sticky;top:0;background:#f5f5f3;z-index:2">출발</th>
+        <th style="position:sticky;top:0;background:#f5f5f3;z-index:2">도착</th>
+        <th style="position:sticky;top:0;background:#f5f5f3;z-index:2;text-align:right">수량</th>
+        <th style="position:sticky;top:0;background:#f5f5f3;z-index:2">구분</th>
+        <th style="position:sticky;top:0;background:#f5f5f3;z-index:2">사유</th>
+        <th style="position:sticky;top:0;background:#f5f5f3;z-index:2">정정</th>
+      </tr></thead>
+      <tbody id="tr-table"><tr><td colspan="8" class="msg">내역이 없습니다</td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- 전체 현황 -->
+<div id="tab-summary" class="section">
+  <div class="card">
+    <div class="section-title">기간 필터</div>
+    <div class="section-sub">선택한 기간 내 사입·판매·소진 수치만 표시됩니다. 재고는 현재 실재고입니다.</div>
+    <div class="preset-btns">
+      <button class="btn btn-sm"            id="pre-all"       onclick="setPreset('all')">전체</button>
+      <button class="btn btn-sm btn-active" id="pre-yesterday" onclick="setPreset('yesterday')">어제</button>
+      <button class="btn btn-sm"            id="pre-today"     onclick="setPreset('today')">오늘</button>
+      <button class="btn btn-sm"            id="pre-week"      onclick="setPreset('week')">이번 주</button>
+      <button class="btn btn-sm"            id="pre-month"     onclick="setPreset('month')">이번 달</button>
+      <button class="btn btn-sm"            id="pre-custom"    onclick="setPreset('custom')">직접 설정</button>
+    </div>
+    <div id="custom-range" style="display:none;grid-template-columns:1fr auto 1fr auto;gap:8px;align-items:flex-end">
+      <div><label>시작일</label><input type="date" id="sum-from"/></div>
+      <span style="padding-bottom:9px;color:#aaa;font-size:13px">~</span>
+      <div><label>종료일</label><input type="date" id="sum-to"/></div>
+      <button class="btn btn-sm btn-primary" onclick="applyCustom()">적용</button>
+    </div>
+    <div id="filter-active-note" class="filter-note"></div>
+  </div>
+  <div class="card">
+    <div class="section-title">품목별 현황</div>
+    <div class="table-wrap" style="max-height:500px;overflow:auto"><table>
+      <thead id="summary-head"></thead>
+      <tbody id="summary-table"><tr><td colspan="6" class="msg">등록된 품목이 없습니다</td></tr></tbody>
+    </table></div>
+  </div>
+</div>
+
+<!-- 일별 현황 -->
+<div id="tab-daily" class="section">
+  <div class="card">
+    <div class="section-title">일별 재고·판매 현황</div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <label style="font-size:13px;color:#666">월 선택</label>
+        <input type="month" id="daily-month" style="width:160px;padding:8px 10px;font-size:14px;border:1px solid #d0d0c8;border-radius:8px"/>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px">
+        <label style="font-size:13px;color:#666">장소</label>
+        <select id="daily-loc" style="width:160px;padding:8px 10px;font-size:14px;border:1px solid #d0d0c8;border-radius:8px" onchange="renderDaily()"></select>
+      </div>
+      <button class="btn btn-primary" style="height:38px;align-self:flex-end" onclick="renderDaily()">조회</button>
+    </div>
+    <div style="font-size:12px;color:#888;margin-bottom:10px">
+      셀: <b style="color:#1a1a1a">재고</b> &nbsp;
+      <span style="color:#1a5ccf">+수량 출처</span> (입고/사입) &nbsp;
+      <span style="color:#c0392b">-수량 목적지</span> (판매/이동/소진) &nbsp;·&nbsp;
+      <span style="background:#f0faf4;padding:1px 6px;border-radius:4px;font-size:11px">정상</span>
+      <span style="background:#fffbf0;padding:1px 6px;border-radius:4px;font-size:11px">부족(3↓)</span>
+      <span style="background:#fff5f5;padding:1px 6px;border-radius:4px;font-size:11px">재고없음</span>
+    </div>
+    <div class="table-wrap" id="daily-table-wrap" style="max-height:600px;overflow:auto"><div class="msg">월을 선택하고 조회 버튼을 눌러주세요</div></div>
+  </div>
+</div>
+
+<!-- 설정 -->
+<div id="tab-settings" class="section">
+  <div class="card">
+    <div class="section-title">장소 관리</div>
+    <div class="section-sub">C4(창고)는 고정. 업장은 자유롭게 추가·삭제·이름 변경 가능합니다.</div>
+    <div class="setting-row">
+      <span style="font-size:13px;color:#888;min-width:60px">C4 (창고)</span>
+      <input type="text" id="set-name-c4" style="max-width:200px"/>
+      <button class="btn btn-sm" onclick="saveLocName('c4')">저장</button>
+    </div>
+    <div id="venue-list"></div>
+    <div style="margin-top:14px;display:flex;gap:8px;align-items:center">
+      <input type="text" id="new-venue-name" placeholder="새 업장 이름 (예: A5 4층)" style="max-width:220px"/>
+      <button class="btn btn-primary btn-sm" onclick="addVenue()">+ 업장 추가</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="section-title" id="settings-product-title">품목 이름 변경 · 삭제</div>
+    <div id="product-list"><div style="font-size:13px;color:#aaa;padding:12px 0">등록된 품목이 없습니다</div></div>
+    <div style="margin-top:10px;font-size:12px;color:#aaa">※ 삭제 시 해당 품목의 모든 재고·이동 내역이 함께 삭제됩니다.</div>
+  </div>
+</div>
+
+</div><!-- /app -->
+
+<!-- 품목 등록 모달 -->
+<div id="modal-product" class="modal-bg" style="display:none">
+  <div class="modal-box">
+    <div style="font-size:16px;font-weight:600;margin-bottom:6px" id="modal-title">품목 등록</div>
+    <div style="font-size:12px;color:#888;margin-bottom:14px" id="modal-cat-label"></div>
+    <label style="font-size:13px;color:#666;display:block;margin-bottom:4px">이름</label>
+    <input type="text" id="new-product-name" placeholder="예: 발렌타인 17년" style="width:100%;margin-bottom:16px"/>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal('product')">취소</button>
+      <button class="btn btn-primary" onclick="addProduct()">등록</button>
+    </div>
+  </div>
+</div>
+
+<!-- 수량 수정 모달 -->
+<div id="modal-edit" class="modal-bg" style="display:none">
+  <div class="modal-box">
+    <div style="font-size:16px;font-weight:600;margin-bottom:6px">수량 수정</div>
+    <div id="edit-modal-desc" style="font-size:13px;color:#888;margin-bottom:16px"></div>
+    <label style="font-size:13px;color:#666;display:block;margin-bottom:4px">수정할 수량</label>
+    <input type="number" id="edit-qty-input" min="0" style="width:100%;margin-bottom:16px"/>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal('edit')">취소</button>
+      <button class="btn btn-primary" onclick="confirmEdit()">수정</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<!-- Firebase -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+const firebaseConfig={apiKey:"AIzaSyChQ0Iq-o2M6DoGk0vgvfIUbiQ9rfzSpEg",authDomain:"liquor-inventory-740d1.firebaseapp.com",projectId:"liquor-inventory-740d1",storageBucket:"liquor-inventory-740d1.firebasestorage.app",messagingSenderId:"275610908139",appId:"1:275610908139:web:8b5c3a67db47bfd6e6d5ae"};
+const app=initializeApp(firebaseConfig);
+const db=getFirestore(app);
+const REF=doc(db,'inventory','main');
+window._fbSave=async function(data){try{await setDoc(REF,data);}catch(e){console.error('FB save error:',e);}};
+let _first=true;
+onSnapshot(REF,(snap)=>{
+  if(snap.exists()){
+    if(window._skipNext){window._skipNext=false;return;}
+    if(window._onFbData)window._onFbData(snap.data(),_first);
+    _first=false;
+  }else{_first=false;}
+});
+</script>
+
+<script>
+const STORE_KEY='wsk_v9';
+
+// ── 상태 ──────────────────────────────────────────────
+// venues: [{id, name}]  (c4는 별도)
+// products: [name]
+// stocks: {locId: {productName: {init,in,sold,etc}}}
+// c4: {productName: {bought, outEtc, out_{locId}...}}
+// transfers: [{id,date,product,fromLoc,toLoc,qty,type,reason}]
+//   type: buy(c4사입), transfer(이동), direct(직접입고), sell(판매), etc(기타소진)
+let S = {
+  locNames: {c4:'C4 창고'},   // c4 + 업장들
+  venues: [],                  // [{id,name}] 업장 목록 (c4 제외)
+  whiskey: { products:[], c4:{}, stocks:{}, transfers:[] },
+  beer:    { products:[], c4:{}, stocks:{}, transfers:[] }
+};
+let currentCat = 'whiskey';
+let sumFilter = {mode:'yesterday', from:null, to:null};
+let editTarget = null;
+
+function C(){ return S[currentCat]; }
+function allLocs(){ return ['c4'].concat(S.venues.map(v=>v.id)); }
+function locName(id){ return S.locNames[id]||id; }
+
+// ── 날짜 유틸 ──────────────────────────────────────────
+function today(){const n=new Date();return n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate());}
+function yesterday(){const n=new Date();n.setDate(n.getDate()-1);return n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate());}
+function startOfWeek(){const n=new Date(),d=n.getDay();n.setDate(n.getDate()-d+(d===0?-6:1));return n.toISOString().slice(0,10);}
+function startOfMonth(){const n=new Date();return n.getFullYear()+'-'+pad(n.getMonth()+1)+'-01';}
+function pad(n){return String(n).padStart(2,'0');}
+function fmtDate(d){return d?d.replace(/-/g,'.'):''}
+
+// ── 저장/불러오기 ──────────────────────────────────────
+function migrateOld(o){
+  // 구버전 → 신버전 변환
+  // venues 복원 (기존 A2,A3,A4 → venues)
+  const oldLocs=['a2','a3','a4'];
+  const oldNames=o.names||o.locNames||{};
+  S.locNames={c4: oldNames.c4||'C4 창고'};
+  S.venues=[];
+  oldLocs.forEach(function(l){
+    const nm=oldNames[l]||(l==='a2'?'A2 2층':l==='a3'?'A3 3층':'A4');
+    S.venues.push({id:l, name:nm});
+    S.locNames[l]=nm;
+  });
+
+  ['whiskey','beer'].forEach(function(cat){
+    const src=o[cat]||{};
+    S[cat].products=src.products||[];
+    S[cat].transfers=(src.transfers||[]).map(function(t){
+      return {
+        date:t.date||today(),
+        product:t.product,
+        fromLoc: t.type==='buy'?'외부': (t.type==='sell'||t.type==='etc'||t.type==='direct')?t.loc||'c4': 'c4',
+        toLoc:   t.type==='buy'?'c4': t.type==='transfer'?t.loc||'a2': t.type==='direct'?t.loc||'a2': t.type==='sell'?'판매': t.loc||'c4',
+        qty:t.qty,
+        type:t.type,
+        reason:t.reason||null
+      };
+    });
+    // c4
+    S[cat].products.forEach(function(p){
+      const oc=(src.c4||{})[p]||{};
+      S[cat].c4[p]={bought:oc.bought||0, outEtc:oc.outEtc||0};
+      // stocks
+      S[cat].stocks[p]={};
+      oldLocs.forEach(function(l){
+        const ol=(src[l]||{})[p]||{};
+        S[cat].stocks[p][l]={init:ol.init||0, in:ol.in||0, sold:ol.sold||0, etc:ol.etc||0};
+      });
+    });
+  });
+}
+
+function migrateNew(o){
+  S.locNames=o.locNames||{c4:'C4 창고'};
+  S.venues=o.venues||[];
+  S.venues.forEach(function(v){S.locNames[v.id]=v.name;});
+  ['whiskey','beer'].forEach(function(cat){
+    const src=o[cat]||{};
+    S[cat].products=src.products||[];
+    S[cat].c4=src.c4||{};
+    S[cat].stocks=src.stocks||{};
+    S[cat].transfers=src.transfers||[];
+    // 신규 품목 stocks 초기화
+    S[cat].products.forEach(function(p){
+      if(!S[cat].stocks[p])S[cat].stocks[p]={};
+      S.venues.forEach(function(v){
+        if(!S[cat].stocks[p][v.id])S[cat].stocks[p][v.id]={init:0,in:0,sold:0,etc:0};
+      });
+      if(!S[cat].c4[p])S[cat].c4[p]={bought:0,outEtc:0};
+    });
+  });
+}
+
+function loadState(){
+  // Firebase 우선, 로컬은 임시
+  for(const k of[STORE_KEY,'wsk_stable','wsk_v8','wsk_v7']){
+    try{
+      const r=localStorage.getItem(k);
+      if(!r)continue;
+      const o=JSON.parse(r);
+      if(o.venues!==undefined) migrateNew(o);
+      else migrateOld(o);
+      return;
+    }catch(e){}
+  }
+}
+
+function saveState(){
+  try{localStorage.setItem(STORE_KEY,JSON.stringify(S));}catch(e){}
+  if(window._fbSave){
+    window._skipNext=true;
+    window._fbSave(JSON.parse(JSON.stringify(S)));
+  }
+}
+
+window._onFbData=function(data,isFirst){
+  if(data.venues!==undefined) migrateNew(data);
+  else migrateOld(data);
+  try{localStorage.setItem(STORE_KEY,JSON.stringify(S));}catch(e){}
+  rebuildTabs();
+  // 첫 로드 시 C4 탭 활성화
+  if(isFirst){
+    document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+    document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+    const c4sec=document.getElementById('tab-c4');
+    const c4btn=document.getElementById('tab-btn-c4');
+    if(c4sec)c4sec.classList.add('active');
+    if(c4btn)c4btn.classList.add('active');
+  }
+  render();
+  const st=document.getElementById('sync-status');
+  if(st)st.textContent='☁️ 클라우드 연결됨 · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+  if(!isFirst)showToast('🔄 다른 멤버가 업데이트했어요');
+};
+
+// ── UI 헬퍼 ───────────────────────────────────────────
+function showToast(msg){const el=document.getElementById('toast');el.textContent=msg;el.style.display='block';setTimeout(()=>el.style.display='none',2400);}
+function openModal(id){
+  const el=document.getElementById('modal-'+id);
+  if(el){el.classList.add('open');el.style.display='flex';}
+}
+function closeModal(id){
+  const el=document.getElementById('modal-'+id);
+  if(el){el.classList.remove('open');el.style.display='none';}
+}
+
+function showTab(name,btn){
+  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  const sec=document.getElementById('tab-'+name);
+  if(sec)sec.classList.add('active');
+  if(btn)btn.classList.add('active');
+  if(name==='daily'){initDailyLocSelect();renderDaily();}
+}
+
+function switchCat(cat){
+  currentCat=cat;
+  document.getElementById('cat-whiskey').classList.toggle('active',cat==='whiskey');
+  document.getElementById('cat-beer').classList.toggle('active',cat==='beer');
+  // 업장 탭 재빌드
+  document.querySelectorAll('[data-loc-tab]').forEach(el=>{el.innerHTML='';delete el.dataset.built;});
+  rebuildTabs();
+  render();
+}
+
+// ── 탭 동적 생성 ───────────────────────────────────────
+function rebuildTabs(){
+  const tabsEl=document.getElementById('main-tabs');
+  const contEl=document.getElementById('tab-contents');
+
+  // 기존 탭 버튼 제거 (고정 탭 제외)
+  tabsEl.innerHTML='';
+  // C4 탭
+  addTabBtn(tabsEl,'c4',locName('c4'),true);
+  // 업장 탭
+  S.venues.forEach(function(v){ addTabBtn(tabsEl,v.id,v.name,false); });
+  // 고정 탭들
+  ['transfer','summary','daily','settings'].forEach(function(name){
+    const labels={transfer:'이동 내역',summary:'전체 현황',daily:'일별 현황',settings:'⚙ 설정'};
+    addTabBtn(tabsEl,name,labels[name],false);
+  });
+
+  // 업장 탭 컨텐츠 재생성
+  contEl.innerHTML='';
+  addLocSection(contEl,'c4');
+  S.venues.forEach(function(v){ addLocSection(contEl,v.id); });
+}
+
+function addTabBtn(container,name,label,isActive){
+  const btn=document.createElement('button');
+  btn.className='tab'+(isActive?' active':'');
+  btn.textContent=label;
+  btn.id='tab-btn-'+name;
+  btn.onclick=function(){showTab(name,btn);};
+  container.appendChild(btn);
+}
+
+function addLocSection(container,locId){
+  const div=document.createElement('div');
+  div.id='tab-'+locId;
+  div.className='section'+(locId==='c4'?' active':'');
+  div.dataset.locTab='1';
+  container.appendChild(div);
+}
+
+// ── 장소 관리 ──────────────────────────────────────────
+function saveLocName(id){
+  const val=document.getElementById('set-name-'+id).value.trim();
+  if(!val){showToast('이름을 입력하세요');return;}
+  S.locNames[id]=val;
+  const v=S.venues.find(x=>x.id===id);
+  if(v)v.name=val;
+  saveState();rebuildTabs();render();showToast('"'+val+'" 저장됨');
+}
+
+function addVenue(){
+  const nm=document.getElementById('new-venue-name').value.trim();
+  if(!nm){showToast('업장 이름을 입력하세요');return;}
+  // ID 생성
+  const id='v'+Date.now();
+  S.venues.push({id,name:nm});
+  S.locNames[id]=nm;
+  // 모든 품목에 stocks 초기화
+  ['whiskey','beer'].forEach(function(cat){
+    S[cat].products.forEach(function(p){
+      if(!S[cat].stocks[p])S[cat].stocks[p]={};
+      S[cat].stocks[p][id]={init:0,in:0,sold:0,etc:0};
+    });
+  });
+  document.getElementById('new-venue-name').value='';
+  saveState();rebuildTabs();render();showToast(nm+' 업장 추가됨');
+}
+
+function deleteVenue(id){
+  const v=S.venues.find(x=>x.id===id);
+  if(!confirm('"'+v.name+'" 업장을 삭제할까요?\n해당 업장의 모든 재고·이동 내역이 함께 삭제됩니다.'))return;
+  S.venues=S.venues.filter(x=>x.id!==id);
+  delete S.locNames[id];
+  ['whiskey','beer'].forEach(function(cat){
+    S[cat].products.forEach(function(p){
+      if(S[cat].stocks[p])delete S[cat].stocks[p][id];
+    });
+    S[cat].transfers=S[cat].transfers.filter(t=>t.fromLoc!==id&&t.toLoc!==id);
+  });
+  saveState();rebuildTabs();render();showToast(v.name+' 삭제됨');
+}
+
+// ── 품목 관리 ──────────────────────────────────────────
+function openModal_product(){
+  document.getElementById('modal-title').textContent=(currentCat==='whiskey'?'위스키':'비어')+' 등록';
+  document.getElementById('modal-cat-label').textContent=currentCat==='whiskey'?'🥃 위스키':'🍺 비어';
+  document.getElementById('new-product-name').value='';
+  openModal('product');
+}
+
+function addProduct(){
+  const name=document.getElementById('new-product-name').value.trim();
+  if(!name){showToast('이름을 입력하세요');return;}
+  if(C().products.includes(name)){showToast('이미 등록된 품목입니다');return;}
+  C().products.push(name);
+  C().c4[name]={bought:0,outEtc:0};
+  C().stocks[name]={};
+  S.venues.forEach(function(v){C().stocks[name][v.id]={init:0,in:0,sold:0,etc:0};});
+  closeModal('product');saveState();rebuildTabs();render();showToast(name+' 등록됨');
+}
+
+function renameProduct(idx){
+  const oldName=C().products[idx];
+  const newName=document.getElementById('ri-'+idx).value.trim();
+  if(!newName){showToast('이름을 입력하세요');return;}
+  if(newName===oldName){showToast('같은 이름입니다');return;}
+  if(C().products.includes(newName)){showToast('이미 존재하는 이름입니다');return;}
+  C().products[idx]=newName;
+  C().c4[newName]=C().c4[oldName];delete C().c4[oldName];
+  C().stocks[newName]=C().stocks[oldName];delete C().stocks[oldName];
+  C().transfers=C().transfers.map(t=>t.product===oldName?Object.assign({},t,{product:newName}):t);
+  saveState();render();showToast('"'+oldName+'" → "'+newName+'" 변경됨');
+}
+
+function deleteProduct(idx){
+  const name=C().products[idx];
+  if(!confirm('"'+name+'" 품목을 삭제할까요?'))return;
+  C().products.splice(idx,1);
+  delete C().c4[name];delete C().stocks[name];
+  C().transfers=C().transfers.filter(t=>t.product!==name);
+  saveState();render();showToast(name+' 삭제됨');
+}
+
+// ── 재고 계산 ──────────────────────────────────────────
+function getC4Stock(p){
+  const c=C().c4[p]||{};
+  const outToVenues=C().transfers.filter(t=>t.product===p&&t.type==='transfer'&&t.fromLoc==='c4').reduce((a,t)=>a+t.qty,0);
+  const fromVenues=C().transfers.filter(t=>t.product===p&&t.type==='transfer'&&t.toLoc==='c4').reduce((a,t)=>a+t.qty,0);
+  return (c.bought||0) - outToVenues + fromVenues - (c.outEtc||0);
+}
+
+function getLocStock(p,locId){
+  // 재고 = init + C4에서 들어온것 + 업장→업장 들어온것 - 나간것 - 판매 - 기타소진
+  const st=C().stocks[p]&&C().stocks[p][locId]?C().stocks[p][locId]:{init:0,in:0,sold:0,etc:0};
+  const inFromTransfer=C().transfers.filter(t=>t.product===p&&t.toLoc===locId&&(t.type==='transfer'||t.type==='direct')).reduce((a,t)=>a+t.qty,0);
+  const outToTransfer=C().transfers.filter(t=>t.product===p&&t.fromLoc===locId&&t.type==='transfer').reduce((a,t)=>a+t.qty,0);
+  const sold=C().transfers.filter(t=>t.product===p&&t.fromLoc===locId&&t.type==='sell').reduce((a,t)=>a+t.qty,0);
+  const etc=C().transfers.filter(t=>t.product===p&&t.fromLoc===locId&&t.type==='etc').reduce((a,t)=>a+t.qty,0);
+  return (st.init||0) + inFromTransfer - outToTransfer - sold - etc;
+}
+
+function getStock(p,locId){
+  if(locId==='c4')return getC4Stock(p);
+  return getLocStock(p,locId);
+}
+
+// ── 입고/판매/이동/소진 ────────────────────────────────
+function buyStock(locId){
+  const p=document.getElementById(locId+'-buy-p').value;
+  const d=document.getElementById(locId+'-buy-date').value||today();
+  const q=parseInt(document.getElementById(locId+'-buy-q').value)||0;
+  if(!p){showToast('품목을 선택하세요');return;}
+  if(q<=0){showToast('수량을 입력하세요');return;}
+  C().c4[p].bought=(C().c4[p].bought||0)+q;
+  C().transfers.unshift({date:d,product:p,fromLoc:'외부',toLoc:'c4',qty:q,type:'buy',reason:null});
+  document.getElementById(locId+'-buy-q').value='';
+  saveState();render();showToast(p+' '+q+'병 입고');
+}
+
+function directIn(locId){
+  const p=document.getElementById(locId+'-direct-p').value;
+  const d=document.getElementById(locId+'-direct-date').value||today();
+  const q=parseInt(document.getElementById(locId+'-direct-q').value)||0;
+  if(!p){showToast('품목을 선택하세요');return;}
+  if(q<=0){showToast('수량을 입력하세요');return;}
+  C().transfers.unshift({date:d,product:p,fromLoc:'외부',toLoc:locId,qty:q,type:'direct',reason:'직접 입고'});
+  document.getElementById(locId+'-direct-q').value='';
+  saveState();render();showToast(p+' '+q+'병 직접 입고');
+}
+
+function sellStock(locId){
+  const p=document.getElementById(locId+'-sell-p').value;
+  const d=document.getElementById(locId+'-sell-date').value||today();
+  const q=parseInt(document.getElementById(locId+'-sell-q').value)||0;
+  if(!p){showToast('품목을 선택하세요');return;}
+  if(q<=0){showToast('수량을 입력하세요');return;}
+  const st=getStock(p,locId);
+  if(q>st){showToast('재고 부족 (현재 '+st+'병)');return;}
+  C().transfers.unshift({date:d,product:p,fromLoc:locId,toLoc:'판매',qty:q,type:'sell',reason:'판매'});
+  document.getElementById(locId+'-sell-q').value='';
+  saveState();render();showToast(p+' '+q+'병 판매');
+}
+
+function etcConsume(locId){
+  const p=document.getElementById(locId+'-etc-p').value;
+  const d=document.getElementById(locId+'-etc-date').value||today();
+  const q=parseInt(document.getElementById(locId+'-etc-q').value)||0;
+  const selEl=document.getElementById(locId+'-etc-reason-sel');
+  const txtEl=document.getElementById(locId+'-etc-reason-txt');
+  const reason=selEl.value==='직접 입력'?(txtEl.value.trim()||'기타'):selEl.value;
+  if(!p){showToast('품목을 선택하세요');return;}
+  if(q<=0){showToast('수량을 입력하세요');return;}
+  const st=getStock(p,locId);
+  if(q>st){showToast('재고 부족 (현재 '+st+'병)');return;}
+  if(locId==='c4')C().c4[p].outEtc=(C().c4[p].outEtc||0)+q;
+  C().transfers.unshift({date:d,product:p,fromLoc:locId,toLoc:'소진',qty:q,type:'etc',reason});
+  document.getElementById(locId+'-etc-q').value='';
+  saveState();render();showToast(p+' '+q+'병 소진 ('+reason+')');
+}
+
+function setInit(locId){
+  const p=document.getElementById(locId+'-init-p').value;
+  const q=parseInt(document.getElementById(locId+'-init-q').value)||0;
+  if(!p){showToast('품목을 선택하세요');return;}
+  if(locId==='c4'){C().c4[p].bought=q;}
+  else{
+    if(!C().stocks[p])C().stocks[p]={};
+    if(!C().stocks[p][locId])C().stocks[p][locId]={init:0,in:0,sold:0,etc:0};
+    C().stocks[p][locId].init=q;
+  }
+  document.getElementById(locId+'-init-q').value='';
+  saveState();render();showToast(p+' 초기 재고 '+q+'병 설정');
+}
+
+function doTransfer(){
+  const p=document.getElementById('tr-p').value;
+  const from=document.getElementById('tr-from').value;
+  const to=document.getElementById('tr-to').value;
+  const d=document.getElementById('tr-date').value||today();
+  const q=parseInt(document.getElementById('tr-q').value)||0;
+  if(!p){showToast('품목을 선택하세요');return;}
+  if(from===to){showToast('출발지와 목적지가 같습니다');return;}
+  if(q<=0){showToast('수량을 입력하세요');return;}
+  const st=getStock(p,from);
+  if(q>st){showToast(locName(from)+' 재고 부족 (현재 '+st+'병)');return;}
+  // C4에서 나가는 경우 outEtc 대신 transfer로 처리
+  C().transfers.unshift({date:d,product:p,fromLoc:from,toLoc:to,qty:q,type:'transfer',reason:null});
+  document.getElementById('tr-q').value='';
+  saveState();render();showToast(p+' '+q+'병 '+locName(from)+' → '+locName(to));
+}
+
+// ── 수정/삭제 ──────────────────────────────────────────
+function openEditModal(idx){
+  const t=C().transfers[idx];editTarget={idx,oldQty:t.qty};
+  const typeLabel={buy:'사입 입고',transfer:'이동',direct:'직접 입고',sell:'판매',etc:'기타 소진'}[t.type]||t.type;
+  document.getElementById('edit-modal-desc').textContent=fmtDate(t.date)+' · '+t.product+' · '+typeLabel;
+  document.getElementById('edit-qty-input').value=t.qty;
+  openModal('edit');
+  setTimeout(()=>document.getElementById('edit-qty-input').select(),100);
+}
+
+function confirmEdit(){
+  if(!editTarget)return;
+  const newQty=parseInt(document.getElementById('edit-qty-input').value)||0;
+  if(newQty<0){showToast('0 이상 입력하세요');return;}
+  const oldQty=C().transfers[editTarget.idx].qty;
+  const t=C().transfers[editTarget.idx];
+  // c4 bought/outEtc 역산
+  if(t.type==='buy')C().c4[t.product].bought=(C().c4[t.product].bought||0)-oldQty+newQty;
+  if(t.type==='etc'&&t.fromLoc==='c4')C().c4[t.product].outEtc=(C().c4[t.product].outEtc||0)-oldQty+newQty;
+  C().transfers[editTarget.idx].qty=newQty;
+  saveState();render();closeModal('edit');showToast('수량 '+oldQty+'병 → '+newQty+'병 수정됨');
+}
+
+function deleteTransfer(idx){
+  const t=C().transfers[idx];
+  const typeLabel={buy:'사입 입고',transfer:'이동',direct:'직접 입고',sell:'판매',etc:'기타 소진'}[t.type]||t.type;
+  if(!confirm(fmtDate(t.date)+' '+t.product+' '+typeLabel+' '+t.qty+'병\n이 내역을 삭제할까요?'))return;
+  if(t.type==='buy')C().c4[t.product].bought=Math.max(0,(C().c4[t.product].bought||0)-t.qty);
+  if(t.type==='etc'&&t.fromLoc==='c4')C().c4[t.product].outEtc=Math.max(0,(C().c4[t.product].outEtc||0)-t.qty);
+  C().transfers.splice(idx,1);
+  saveState();render();showToast('내역 삭제됨');
+}
+
+// ── 필터 ───────────────────────────────────────────────
+function setPreset(mode){
+  sumFilter.mode=mode;
+  document.querySelectorAll('[id^="pre-"]').forEach(b=>b.classList.remove('btn-active'));
+  document.getElementById('pre-'+mode).classList.add('btn-active');
+  document.getElementById('custom-range').style.display=mode==='custom'?'grid':'none';
+  if(mode!=='custom')renderSummary();
+}
+function applyCustom(){sumFilter.from=document.getElementById('sum-from').value||null;sumFilter.to=document.getElementById('sum-to').value||null;renderSummary();}
+function getRange(){
+  const t=today(),y=yesterday();
+  if(sumFilter.mode==='all')return{from:null,to:null};
+  if(sumFilter.mode==='yesterday')return{from:y,to:y};
+  if(sumFilter.mode==='today')return{from:t,to:t};
+  if(sumFilter.mode==='week')return{from:startOfWeek(),to:t};
+  if(sumFilter.mode==='month')return{from:startOfMonth(),to:t};
+  return{from:sumFilter.from,to:sumFilter.to};
+}
+function inRange(date,from,to){if(!from&&!to)return true;if(from&&date<from)return false;if(to&&date>to)return false;return true;}
+
+// ── select 채우기 ──────────────────────────────────────
+function fillSelect(id,options){
+  // options: [{value,label}] or [string]
+  const el=document.getElementById(id);if(!el)return;
+  const cur=el.value;
+  el.innerHTML='<option value="">선택하세요</option>';
+  options.forEach(function(o){
+    const val=typeof o==='string'?o:o.value;
+    const lbl=typeof o==='string'?o:o.label;
+    const opt=document.createElement('option');
+    opt.value=val;opt.textContent=lbl;
+    if(val===cur)opt.selected=true;
+    el.appendChild(opt);
+  });
+}
+
+function fillLocSelect(id, excludeLoc, includeExternal){
+  const el=document.getElementById(id);if(!el)return;
+  const cur=el.value;el.innerHTML='';
+  if(includeExternal){const o=document.createElement('option');o.value='외부';o.textContent='외부';el.appendChild(o);}
+  const locs=[{id:'c4',name:locName('c4')}].concat(S.venues.map(v=>({id:v.id,name:v.name})));
+  locs.forEach(function(l){
+    if(l.id===excludeLoc)return;
+    const o=document.createElement('option');o.value=l.id;o.textContent=l.name;
+    if(l.id===cur)o.selected=true;
+    el.appendChild(o);
+  });
+}
+
+// ── 탭 컨텐츠 렌더 ────────────────────────────────────
+function renderLocTab(locId){
+  const el=document.getElementById('tab-'+locId);
+  if(!el)return;
+  const isC4=locId==='c4';
+  const prods=C().products;
+  const n=locName(locId);
+
+  let html='<div class="stat-row">';
+  if(isC4){
+    const totalIn=prods.reduce((a,p)=>a+(C().c4[p]?C().c4[p].bought||0:0),0);
+    const totalOut=prods.reduce((a,p)=>a+C().transfers.filter(t=>t.product===p&&t.fromLoc==='c4'&&t.type==='transfer').reduce((s,t)=>s+t.qty,0),0);
+    const totalEtc=prods.reduce((a,p)=>a+(C().c4[p]?C().c4[p].outEtc||0:0),0);
+    html+='<div class="stat"><div class="stat-label">총 사입</div><div class="stat-val">'+totalIn+'</div></div>';
+    html+='<div class="stat"><div class="stat-label">업장 출고</div><div class="stat-val">'+totalOut+'</div></div>';
+    html+='<div class="stat"><div class="stat-label">기타 소진</div><div class="stat-val">'+totalEtc+'</div></div>';
+    html+='<div class="stat"><div class="stat-label">현재 재고</div><div class="stat-val">'+(totalIn-totalOut-totalEtc)+'</div></div>';
+  } else {
+    const totalInit=prods.reduce((a,p)=>a+((C().stocks[p]&&C().stocks[p][locId])?C().stocks[p][locId].init||0:0),0);
+    const totalIn=prods.reduce((a,p)=>a+C().transfers.filter(t=>t.product===p&&t.toLoc===locId&&(t.type==='transfer'||t.type==='direct')).reduce((s,t)=>s+t.qty,0),0);
+    const totalSold=prods.reduce((a,p)=>a+C().transfers.filter(t=>t.product===p&&t.fromLoc===locId&&t.type==='sell').reduce((s,t)=>s+t.qty,0),0);
+    const totalEtc=prods.reduce((a,p)=>a+C().transfers.filter(t=>t.product===p&&t.fromLoc===locId&&t.type==='etc').reduce((s,t)=>s+t.qty,0),0);
+    const totalStock=prods.reduce((a,p)=>a+getLocStock(p,locId),0);
+    html+='<div class="stat"><div class="stat-label">초기 재고</div><div class="stat-val">'+totalInit+'</div></div>';
+    html+='<div class="stat"><div class="stat-label">총 입고</div><div class="stat-val">'+totalIn+'</div></div>';
+    html+='<div class="stat"><div class="stat-label">총 판매</div><div class="stat-val">'+totalSold+'</div></div>';
+    html+='<div class="stat"><div class="stat-label">기타 소진</div><div class="stat-val">'+totalEtc+'</div></div>';
+    html+='<div class="stat"><div class="stat-label">현재 재고</div><div class="stat-val">'+totalStock+'</div></div>';
+  }
+  html+='</div>';
+
+  // 판매기록 (C4 제외)
+  if(!isC4){
+    html+='<div class="card">';
+    html+='<div class="section-title">판매 기록 — '+n+'</div>';
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
+    html+='<div><label>품목</label><select id="'+locId+'-sell-p"></select></div>';
+    html+='<div><label>날짜</label><input type="date" id="'+locId+'-sell-date"/></div>';
+    html+='<div><label>수량</label><input type="number" id="'+locId+'-sell-q" min="1" placeholder="0"/></div>';
+    html+='</div>';
+    html+='<button class="btn btn-primary" style="width:100%" onclick="sellStock(\''+locId+'\')">판매</button>';
+    html+='</div>';
+  }
+
+  // 사입 입고 (C4)
+  if(isC4){
+    html+='<div class="card">';
+    html+='<div class="section-title">사입 입고</div>';
+    html+='<div class="section-sub">'+n+'에 재고를 사입할 때 기록합니다</div>';
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
+    html+='<div><label>품목</label><select id="'+locId+'-buy-p"></select></div>';
+    html+='<div><label>날짜</label><input type="date" id="'+locId+'-buy-date"/></div>';
+    html+='<div><label>수량</label><input type="number" id="'+locId+'-buy-q" min="1" placeholder="0"/></div>';
+    html+='</div>';
+    html+='<button class="btn btn-primary" style="width:100%" onclick="buyStock(\''+locId+'\')">입고</button>';
+    html+='</div>';
+  }
+
+  // 직접 입고 (업장)
+  if(!isC4){
+    html+='<div class="card">';
+    html+='<div class="section-title">직접 입고</div>';
+    html+='<div class="section-sub">배달 등으로 업장에 바로 들어오는 경우</div>';
+    html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
+    html+='<div><label>품목</label><select id="'+locId+'-direct-p"></select></div>';
+    html+='<div><label>날짜</label><input type="date" id="'+locId+'-direct-date"/></div>';
+    html+='<div><label>수량</label><input type="number" id="'+locId+'-direct-q" min="1" placeholder="0"/></div>';
+    html+='</div>';
+    html+='<button class="btn" style="width:100%" onclick="directIn(\''+locId+'\')">직접 입고</button>';
+    html+='</div>';
+  }
+
+  // 재고 현황 표
+  html+='<div class="card"><div class="section-title">'+n+' 재고 현황</div>';
+  html+='<div class="table-wrap" style="max-height:400px;overflow:auto"><table>';
+  const thS='position:sticky;top:0;background:#f5f5f3;z-index:2;text-align:left;padding:8px 10px;font-weight:500;font-size:12px;color:#888;border-bottom:1px solid #e8e8e0;white-space:nowrap';
+  if(isC4){
+    html+='<thead><tr><th style="'+thS+'">품목</th><th style="'+thS+';text-align:right">사입</th><th style="'+thS+';text-align:right">출고</th><th style="'+thS+';text-align:right">기타</th><th style="'+thS+';text-align:right">재고</th><th style="'+thS+'">상태</th></tr></thead>';
+  } else {
+    html+='<thead><tr><th style="'+thS+'">품목</th><th style="'+thS+';text-align:right">초기</th><th style="'+thS+';text-align:right">입고</th><th style="'+thS+';text-align:right">판매</th><th style="'+thS+';text-align:right">기타</th><th style="'+thS+';text-align:right">재고</th><th style="'+thS+'">상태</th></tr></thead>';
+  }
+  html+='<tbody>';
+  if(!prods.length){
+    html+='<tr><td colspan="7" class="msg">등록된 품목이 없습니다</td></tr>';
+  } else {
+    prods.forEach(function(p){
+      const st=getStock(p,locId);
+      const badgeCls=st<=0?'badge-out':st<=3?'badge-low':'badge-ok';
+      const badgeTxt=st<=0?'재고없음':st<=3?'부족':'정상';
+      if(isC4){
+        const b=C().c4[p]?C().c4[p].bought||0:0;
+        const out=C().transfers.filter(t=>t.product===p&&t.fromLoc==='c4'&&t.type==='transfer').reduce((a,t)=>a+t.qty,0);
+        const etc=C().c4[p]?C().c4[p].outEtc||0:0;
+        html+='<tr><td>'+p+'</td><td style="text-align:right">'+b+'</td><td style="text-align:right">'+out+'</td><td style="text-align:right">'+etc+'</td><td style="text-align:right"><b>'+st+'</b></td><td><span class="badge '+badgeCls+'">'+badgeTxt+'</span></td></tr>';
+      } else {
+        const ini=(C().stocks[p]&&C().stocks[p][locId])?C().stocks[p][locId].init||0:0;
+        const inv=C().transfers.filter(t=>t.product===p&&t.toLoc===locId&&(t.type==='transfer'||t.type==='direct')).reduce((a,t)=>a+t.qty,0);
+        const sold=C().transfers.filter(t=>t.product===p&&t.fromLoc===locId&&t.type==='sell').reduce((a,t)=>a+t.qty,0);
+        const etc=C().transfers.filter(t=>t.product===p&&t.fromLoc===locId&&t.type==='etc').reduce((a,t)=>a+t.qty,0);
+        html+='<tr><td>'+p+'</td><td style="text-align:right">'+ini+'</td><td style="text-align:right">'+inv+'</td><td style="text-align:right">'+sold+'</td><td style="text-align:right">'+etc+'</td><td style="text-align:right"><b>'+st+'</b></td><td><span class="badge '+badgeCls+'">'+badgeTxt+'</span></td></tr>';
+      }
+    });
+  }
+  html+='</tbody></table></div></div>';
+
+  // 기타 소진 (접힘)
+  html+='<div class="card">';
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="toggleSection(\''+locId+'-etc-body\',\''+locId+'-etc-arrow\')">';
+  html+='<div><div class="section-title">기타 소진 기록</div><div style="font-size:12px;color:#aaa;margin-top:2px">서비스·파손 등 — 클릭하여 펼치기</div></div>';
+  html+='<span id="'+locId+'-etc-arrow" style="font-size:18px;color:#aaa;transition:transform .2s">▼</span>';
+  html+='</div>';
+  html+='<div id="'+locId+'-etc-body" style="display:none;margin-top:14px">';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
+  html+='<div><label>품목</label><select id="'+locId+'-etc-p"></select></div>';
+  html+='<div><label>날짜</label><input type="date" id="'+locId+'-etc-date"/></div>';
+  html+='<div><label>수량</label><input type="number" id="'+locId+'-etc-q" min="1" placeholder="0"/></div>';
+  html+='</div>';
+  html+='<div style="margin-bottom:10px"><label>사유</label><div class="reason-wrap">';
+  const etcOpts=isC4?['업주 소진','선물','시음','파손']:['서비스','파손','업주 소진','시음'];
+  html+='<select id="'+locId+'-etc-reason-sel" onchange="syncReason(\''+locId+'-etc\')">';
+  etcOpts.forEach(function(o){html+='<option value="'+o+'">'+o+'</option>';});
+  html+='<option value="직접 입력">직접 입력...</option>';
+  html+='</select>';
+  html+='<input type="text" id="'+locId+'-etc-reason-txt" placeholder="사유 직접 입력" style="display:none"/>';
+  html+='</div></div>';
+  html+='<button class="btn" style="width:100%" onclick="etcConsume(\''+locId+'\')">소진 기록</button>';
+  html+='</div></div>';
+
+  // 초기 재고 설정 (접힘, 맨 아래)
+  html+='<div class="card">';
+  html+='<div style="display:flex;align-items:center;justify-content:space-between;cursor:pointer" onclick="toggleSection(\''+locId+'-init-body\',\''+locId+'-init-arrow\')">';
+  html+='<div><div class="section-title">초기 재고 설정</div><div style="font-size:12px;color:#aaa;margin-top:2px">앱 최초 사용 시에만 — 클릭하여 펼치기</div></div>';
+  html+='<span id="'+locId+'-init-arrow" style="font-size:18px;color:#aaa;transition:transform .2s">▼</span>';
+  html+='</div>';
+  html+='<div id="'+locId+'-init-body" style="display:none;margin-top:14px">';
+  html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
+  html+='<div><label>품목</label><select id="'+locId+'-init-p"></select></div>';
+  html+='<div><label>수량</label><input type="number" id="'+locId+'-init-q" min="0" placeholder="0"/></div>';
+  html+='</div>';
+  html+='<button class="btn" style="width:100%" onclick="setInit(\''+locId+'\')">등록</button>';
+  html+='</div></div>';
+
+  el.innerHTML=html;
+
+  // select 채우기
+  const prodOpts=C().products;
+  ['buy','direct','sell','etc','init'].forEach(function(action){
+    fillSelect(locId+'-'+action+'-p', prodOpts);
+  });
+  // 날짜 기본값
+  ['buy','direct','sell','etc'].forEach(function(action){
+    const el2=document.getElementById(locId+'-'+action+'-date');
+    if(el2&&!el2.value)el2.value=today();
+  });
+}
+
+// ── 전체 현황 렌더 ─────────────────────────────────────
+function renderSummary(){
+  const {from,to}=getRange();
+  const prods=C().products;
+  const note=document.getElementById('filter-active-note');
+  if(note){
+    if(!from&&!to)note.textContent='현재: 전체 기간';
+    else if(from===to)note.textContent='현재: '+fmtDate(from);
+    else note.textContent='현재: '+fmtDate(from||'처음')+' ~ '+fmtDate(to||'오늘');
+  }
+  // 헤더
+  const head=document.getElementById('summary-head');
+  if(head){
+    const thStyle='position:sticky;top:0;background:#f5f5f3;z-index:2;padding:8px 10px;font-weight:500;font-size:12px;color:#888;border-bottom:1px solid #e8e8e0;white-space:nowrap';
+    let hh='<tr><th style="'+thStyle+'">품목</th><th style="'+thStyle+';text-align:right">사입</th><th style="'+thStyle+';text-align:right">C4 재고</th>';
+    S.venues.forEach(function(v){hh+='<th style="'+thStyle+';text-align:right">'+v.name+' 재고</th>';});
+    hh+='<th style="'+thStyle+';text-align:right">기타 소진</th><th style="'+thStyle+';text-align:right">판매</th></tr>';
+    head.innerHTML=hh;
+  }
+  if(!prods.length){
+    document.getElementById('summary-table').innerHTML='<tr><td colspan="'+(5+S.venues.length)+'" class="msg">등록된 품목이 없습니다</td></tr>';
+    return;
+  }
+  const filtered=C().transfers.filter(t=>inRange(t.date,from,to));
+  const rows=prods.map(function(p){
+    const bought=filtered.filter(t=>t.product===p&&t.type==='buy').reduce((a,t)=>a+t.qty,0);
+    const sold=filtered.filter(t=>t.product===p&&t.type==='sell').reduce((a,t)=>a+t.qty,0);
+    const etc=filtered.filter(t=>t.product===p&&(t.type==='etc')).reduce((a,t)=>a+t.qty,0);
+    const c4s=getC4Stock(p);
+    const locStocks=S.venues.map(v=>getLocStock(p,v.id));
+    return{p,bought,sold,etc,c4s,locStocks};
+  });
+  const tBought=rows.reduce((a,r)=>a+r.bought,0);
+  const tSold=rows.reduce((a,r)=>a+r.sold,0);
+  const tEtc=rows.reduce((a,r)=>a+r.etc,0);
+  const tC4s=rows.reduce((a,r)=>a+r.c4s,0);
+  const tLoc=S.venues.map((_,i)=>rows.reduce((a,r)=>a+r.locStocks[i],0));
+  let html=rows.map(function(r){
+    let tr='<tr><td><b>'+r.p+'</b></td><td style="text-align:right">'+r.bought+'</td><td style="text-align:right">'+r.c4s+'</td>';
+    r.locStocks.forEach(function(s){tr+='<td style="text-align:right">'+s+'</td>';});
+    tr+='<td style="text-align:right">'+r.etc+'</td><td style="text-align:right">'+r.sold+'</td></tr>';
+    return tr;
+  }).join('');
+  html+='<tr style="border-top:2px solid #d0d0c8;background:#f5f5f3;font-weight:600">';
+  html+='<td>TOTAL</td><td style="text-align:right">'+tBought+'</td><td style="text-align:right">'+tC4s+'</td>';
+  tLoc.forEach(function(s){html+='<td style="text-align:right">'+s+'</td>';});
+  html+='<td style="text-align:right">'+tEtc+'</td><td style="text-align:right">'+tSold+'</td></tr>';
+  document.getElementById('summary-table').innerHTML=html;
+}
+
+// ── 일별 현황 ──────────────────────────────────────────
+function initDailyLocSelect(){
+  const el=document.getElementById('daily-loc');if(!el)return;
+  const cur=el.value;el.innerHTML='';
+  const locs=[{id:'c4',name:locName('c4')}].concat(S.venues.map(v=>({id:v.id,name:v.name})));
+  locs.forEach(function(l){
+    const o=document.createElement('option');o.value=l.id;o.textContent=l.name;
+    if(l.id===cur)o.selected=true;
+    el.appendChild(o);
+  });
+  const dm=document.getElementById('daily-month');
+  if(dm&&!dm.value){const n=new Date();dm.value=n.getFullYear()+'-'+pad(n.getMonth()+1);}
+}
+
+function renderDaily(){
+  const monthEl=document.getElementById('daily-month');
+  const locEl=document.getElementById('daily-loc');
+  const wrap=document.getElementById('daily-table-wrap');
+  if(!monthEl||!monthEl.value){if(wrap)wrap.innerHTML='<div class="msg">월을 선택하고 조회 버튼을 눌러주세요</div>';return;}
+  const parts=monthEl.value.split('-');
+  const year=parseInt(parts[0]),month=parseInt(parts[1]);
+  const loc=locEl?locEl.value:'c4';
+  const prods=C().products;
+  if(!prods.length){wrap.innerHTML='<div class="msg">등록된 품목이 없습니다</div>';return;}
+  const daysInMonth=new Date(year,month,0).getDate();
+  function ds(d){return year+'-'+pad(month)+'-'+pad(d);}
+  function stockOnDay(p,d){
+    const dateStr=ds(d);
+    if(loc==='c4'){
+      const bought=C().transfers.filter(t=>t.product===p&&t.type==='buy'&&t.date<=dateStr).reduce((a,t)=>a+t.qty,0);
+      const initBought=(C().c4[p]?C().c4[p].bought||0:0)-C().transfers.filter(t=>t.product===p&&t.type==='buy').reduce((a,t)=>a+t.qty,0);
+      const out=C().transfers.filter(t=>t.product===p&&t.fromLoc==='c4'&&t.type==='transfer'&&t.date<=dateStr).reduce((a,t)=>a+t.qty,0);
+      const back=C().transfers.filter(t=>t.product===p&&t.toLoc==='c4'&&t.type==='transfer'&&t.date<=dateStr).reduce((a,t)=>a+t.qty,0);
+      const etc=C().transfers.filter(t=>t.product===p&&t.fromLoc==='c4'&&t.type==='etc'&&t.date<=dateStr).reduce((a,t)=>a+t.qty,0);
+      return Math.max(0,initBought)+bought-out+back-etc;
+    }
+    const init=(C().stocks[p]&&C().stocks[p][loc])?C().stocks[p][loc].init||0:0;
+    const inQty=C().transfers.filter(t=>t.product===p&&t.toLoc===loc&&(t.type==='transfer'||t.type==='direct')&&t.date<=dateStr).reduce((a,t)=>a+t.qty,0);
+    const outQty=C().transfers.filter(t=>t.product===p&&t.fromLoc===loc&&t.type==='transfer'&&t.date<=dateStr).reduce((a,t)=>a+t.qty,0);
+    const sold=C().transfers.filter(t=>t.product===p&&t.fromLoc===loc&&t.type==='sell'&&t.date<=dateStr).reduce((a,t)=>a+t.qty,0);
+    const etc=C().transfers.filter(t=>t.product===p&&t.fromLoc===loc&&t.type==='etc'&&t.date<=dateStr).reduce((a,t)=>a+t.qty,0);
+    return init+inQty-outQty-sold-etc;
+  }
+  function inDetailsOnDay(p,d){
+    // 입고 상세: [{qty, from}]
+    const dateStr=ds(d);
+    var details=[];
+    if(loc==='c4'){
+      var bq=C().transfers.filter(function(t){return t.product===p&&t.type==='buy'&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
+      if(bq>0)details.push({qty:bq,label:'사입'});
+      // 업장에서 C4로 돌아오는 경우
+      C().transfers.filter(function(t){return t.product===p&&t.toLoc==='c4'&&t.type==='transfer'&&t.date===dateStr;}).forEach(function(t){
+        details.push({qty:t.qty,label:locName(t.fromLoc)+'→'});
+      });
+    } else {
+      // C4 또는 다른 업장에서 입고
+      var groups={};
+      C().transfers.filter(function(t){return t.product===p&&t.toLoc===loc&&(t.type==='transfer'||t.type==='direct')&&t.date===dateStr;}).forEach(function(t){
+        var lbl=t.type==='direct'?'직접':locName(t.fromLoc);
+        groups[lbl]=(groups[lbl]||0)+t.qty;
+      });
+      Object.keys(groups).forEach(function(lbl){details.push({qty:groups[lbl],label:lbl});});
+    }
+    return details;
+  }
+
+  function outDetailsOnDay(p,d){
+    // 출고 상세: [{qty, to}]
+    const dateStr=ds(d);
+    var details=[];
+    if(loc==='c4'){
+      // 업장으로 이동
+      var groups={};
+      C().transfers.filter(function(t){return t.product===p&&t.fromLoc==='c4'&&t.type==='transfer'&&t.date===dateStr;}).forEach(function(t){
+        var lbl=locName(t.toLoc);
+        groups[lbl]=(groups[lbl]||0)+t.qty;
+      });
+      Object.keys(groups).forEach(function(lbl){details.push({qty:groups[lbl],label:lbl});});
+      // 기타 소진
+      var eq=C().transfers.filter(function(t){return t.product===p&&t.fromLoc==='c4'&&t.type==='etc'&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
+      if(eq>0)details.push({qty:eq,label:'소진'});
+    } else {
+      // 판매
+      var sq=C().transfers.filter(function(t){return t.product===p&&t.fromLoc===loc&&t.type==='sell'&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
+      if(sq>0)details.push({qty:sq,label:'판매'});
+      // 다른 업장으로 이동
+      var groups2={};
+      C().transfers.filter(function(t){return t.product===p&&t.fromLoc===loc&&t.type==='transfer'&&t.date===dateStr;}).forEach(function(t){
+        var lbl=locName(t.toLoc);
+        groups2[lbl]=(groups2[lbl]||0)+t.qty;
+      });
+      Object.keys(groups2).forEach(function(lbl){details.push({qty:groups2[lbl],label:lbl});});
+      // 기타 소진
+      var eq2=C().transfers.filter(function(t){return t.product===p&&t.fromLoc===loc&&t.type==='etc'&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
+      if(eq2>0)details.push({qty:eq2,label:'소진'});
+    }
+    return details;
+  }
+  function cellBg(s){if(s<=0)return'#fff5f5';if(s<=3)return'#fffbf0';return'#f0faf4';}
+  const td=today();
+  var html='<table style="font-size:12px;border-collapse:collapse;min-width:100%"><thead><tr>';
+  html+='<th style="position:sticky;left:0;top:0;background:#f5f5f3;padding:8px 10px;border-bottom:1px solid #e8e8e0;border-right:1px solid #e0e0d8;white-space:nowrap;z-index:3;font-size:12px;color:#888">날짜</th>';
+  prods.forEach(function(p){html+='<th style="position:sticky;top:0;padding:7px 8px;border-bottom:1px solid #e8e8e0;border-right:1px solid #f0f0e8;text-align:center;white-space:nowrap;font-size:12px;min-width:72px;background:#f5f5f3;z-index:2">'+p+'</th>';});
+  html+='</tr></thead><tbody>';
+  for(var d=1;d<=daysInMonth;d++){
+    var dateStr2=ds(d);
+    var isToday=dateStr2===td;
+    html+='<tr style="'+(isToday?'background:#f0f4ff':'')+'"><td style="position:sticky;left:0;padding:8px 10px;border-bottom:1px solid #f0f0e8;border-right:1px solid #e0e0d8;white-space:nowrap;font-weight:'+(isToday?'600':'400')+';color:'+(isToday?'#1a5ccf':'#666')+';background:'+(isToday?'#e8eeff':'#fafaf8')+'">'+month+'/'+d+(isToday?' ●':'')+'</td>';
+    prods.forEach(function(p){
+      var stock=stockOnDay(p,d);
+      var inDetails=inDetailsOnDay(p,d);
+      var outDetails=outDetailsOnDay(p,d);
+      var bg=cellBg(stock);
+      html+='<td style="text-align:center;padding:5px 4px;border-bottom:1px solid #f0f0e8;border-right:1px solid #f0f0e8;background:'+bg+';min-width:72px;vertical-align:top">';
+      html+='<div style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:2px">'+stock+'</div>';
+      inDetails.forEach(function(d2){
+        html+='<div style="font-size:10px;color:#1a5ccf;white-space:nowrap">+'+d2.qty+' <span style="color:#888">'+d2.label+'</span></div>';
+      });
+      outDetails.forEach(function(d2){
+        html+='<div style="font-size:10px;color:#c0392b;white-space:nowrap">-'+d2.qty+' <span style="color:#888">'+d2.label+'</span></div>';
+      });
+      html+='</td>';
+    });
+    html+='</tr>';
+  }
+  html+='</tbody></table>';
+  wrap.innerHTML=html;
+}
+
+// ── 이동 내역 렌더 ─────────────────────────────────────
+function renderTransfer(){
+  const prods=C().products;
+  fillSelect('tr-p',prods);
+  fillLocSelect('tr-from',null,false);
+  fillLocSelect('tr-to',null,false);
+  const el=document.getElementById('tr-date');if(el&&!el.value)el.value=today();
+  const typeTag={buy:'<span class="tag tag-buy">사입 입고</span>',transfer:'<span class="tag tag-transfer">이동</span>',direct:'<span class="tag tag-direct">직접 입고</span>',sell:'<span class="tag tag-sell">판매</span>',etc:'<span class="tag tag-etc">기타 소진</span>'};
+  document.getElementById('tr-table').innerHTML=C().transfers.length
+    ?C().transfers.map(function(t,i){
+      const from=t.fromLoc==='외부'?'외부':locName(t.fromLoc)||t.fromLoc;
+      const to=t.toLoc==='판매'?'판매':t.toLoc==='소진'?'소진':locName(t.toLoc)||t.toLoc;
+      return '<tr><td style="color:#aaa;white-space:nowrap">'+fmtDate(t.date)+'</td><td>'+t.product+'</td><td>'+from+'</td><td>'+to+'</td><td style="text-align:right">'+t.qty+'병</td><td>'+(typeTag[t.type]||t.type)+'</td><td style="color:#888">'+(t.reason||'-')+'</td><td style="white-space:nowrap"><button class="btn btn-sm" onclick="openEditModal('+i+')" style="margin-right:4px">수정</button><button class="btn btn-sm btn-danger" onclick="deleteTransfer('+i+')">삭제</button></td></tr>';
+    }).join('')
+    :'<tr><td colspan="8" class="msg">내역이 없습니다</td></tr>';
+}
+
+// ── 설정 렌더 ──────────────────────────────────────────
+function renderSettings(){
+  // C4 이름
+  const c4el=document.getElementById('set-name-c4');
+  if(c4el)c4el.value=locName('c4');
+  // 업장 목록
+  const vl=document.getElementById('venue-list');
+  if(vl){
+    vl.innerHTML=S.venues.map(function(v){
+      return '<div class="setting-row"><span style="font-size:13px;color:#888;min-width:60px">업장</span><input type="text" id="set-name-'+v.id+'" value="'+v.name+'" style="max-width:200px"/><button class="btn btn-sm" onclick="saveLocName(\''+v.id+'\')">저장</button><button class="btn btn-sm btn-danger" onclick="deleteVenue(\''+v.id+'\')">삭제</button></div>';
+    }).join('')||'<div style="font-size:13px;color:#aaa;padding:10px 0">등록된 업장이 없습니다</div>';
+  }
+  // 품목 목록
+  const cat=currentCat==='whiskey'?'위스키':'비어';
+  const ptitle=document.getElementById('settings-product-title');
+  if(ptitle)ptitle.textContent=cat+' 품목 이름 변경 · 삭제';
+  const pl=document.getElementById('product-list');
+  if(pl){
+    pl.innerHTML=C().products.length
+      ?C().products.map(function(p,i){
+        return '<div class="product-row"><input type="text" id="ri-'+i+'" value="'+p+'" style="flex:1;max-width:220px"/><button class="btn btn-sm" onclick="renameProduct('+i+')">이름 변경</button><button class="btn btn-sm btn-danger" onclick="deleteProduct('+i+')">삭제</button></div>';
+      }).join('')
+      :'<div style="font-size:13px;color:#aaa;padding:12px 0">등록된 품목이 없습니다</div>';
+  }
+}
+
+// ── 유틸 ───────────────────────────────────────────────
+function toggleSection(bodyId,arrowId){
+  const body=document.getElementById(bodyId);if(!body)return;
+  const isOpen=body.style.display!=='none';
+  body.style.display=isOpen?'none':'block';
+  const arrow=document.getElementById(arrowId);
+  if(arrow)arrow.style.transform=isOpen?'':'rotate(180deg)';
+}
+function syncReason(prefix){
+  const sel=document.getElementById(prefix+'-reason-sel');
+  const txt=document.getElementById(prefix+'-reason-txt');
+  if(!sel||!txt)return;
+  txt.style.display=sel.value==='직접 입력'?'':'none';
+  if(sel.value==='직접 입력')txt.focus();
+}
+
+// ── 전체 렌더 ──────────────────────────────────────────
+function render(){
+  const catLabel=currentCat==='whiskey'?'🥃 위스키':'🍺 비어';
+  const sub=document.getElementById('header-sub');
+  if(sub){
+    let locs=locName('c4');
+    S.venues.forEach(function(v){locs+=' · '+v.name;});
+    sub.textContent=catLabel+' · '+locs;
+  }
+  // 탭 버튼 이름 업데이트
+  document.getElementById('tab-btn-c4').textContent=locName('c4');
+  S.venues.forEach(function(v){
+    const btn=document.getElementById('tab-btn-'+v.id);
+    if(btn)btn.textContent=v.name;
+  });
+  // 각 장소 탭 렌더
+  renderLocTab('c4');
+  S.venues.forEach(function(v){renderLocTab(v.id);});
+  renderTransfer();
+  renderSummary();
+  renderSettings();
+}
+
+// ── 초기화 ─────────────────────────────────────────────
+// 모달 바깥 클릭 시 닫기
+document.querySelectorAll('.modal-bg').forEach(function(el){
+  el.addEventListener('click',function(e){
+    if(e.target===el){
+      const id=el.id.replace('modal-','');
+      closeModal(id);
+    }
+  });
+});
+
+loadState();
+rebuildTabs();
+// C4 탭 기본 활성화
+document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
+document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+const _c4sec=document.getElementById('tab-c4');
+const _c4btn=document.getElementById('tab-btn-c4');
+if(_c4sec)_c4sec.classList.add('active');
+if(_c4btn)_c4btn.classList.add('active');
+sumFilter.mode='yesterday';
+render();
+document.getElementById('pre-yesterday').classList.add('btn-active');
+</script>
+</body>
+</html>
