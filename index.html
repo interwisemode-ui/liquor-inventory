@@ -287,7 +287,9 @@ let sumFilter = {mode:'yesterday', from:null, to:null};
 let editTarget = null;
 
 function C(){ return S[currentCat]; }
+function activeVenues(){ return S.venues.filter(function(v){return v.active!==false;}); }
 function allLocs(){ return ['c4'].concat(S.venues.map(v=>v.id)); }
+function activeLocs(){ return ['c4'].concat(activeVenues().map(v=>v.id)); }
 function locName(id){ return S.locNames[id]||id; }
 
 // ── 날짜 유틸 ──────────────────────────────────────────
@@ -300,15 +302,13 @@ function fmtDate(d){return d?d.replace(/-/g,'.'):''}
 
 // ── 저장/불러오기 ──────────────────────────────────────
 function migrateOld(o){
-  // 구버전 → 신버전 변환
-  // venues 복원 (기존 A2,A3,A4 → venues)
   const oldLocs=['a2','a3','a4'];
   const oldNames=o.names||o.locNames||{};
   S.locNames={c4: oldNames.c4||'C4 창고'};
   S.venues=[];
   oldLocs.forEach(function(l){
     const nm=oldNames[l]||(l==='a2'?'A2 2층':l==='a3'?'A3 3층':'A4');
-    S.venues.push({id:l, name:nm});
+    S.venues.push({id:l, name:nm, active:l==='a2'});
     S.locNames[l]=nm;
   });
 
@@ -326,11 +326,9 @@ function migrateOld(o){
         reason:t.reason||null
       };
     });
-    // c4
     S[cat].products.forEach(function(p){
       const oc=(src.c4||{})[p]||{};
       S[cat].c4[p]={bought:oc.bought||0, outEtc:oc.outEtc||0};
-      // stocks
       S[cat].stocks[p]={};
       oldLocs.forEach(function(l){
         const ol=(src[l]||{})[p]||{};
@@ -343,14 +341,17 @@ function migrateOld(o){
 function migrateNew(o){
   S.locNames=o.locNames||{c4:'C4 창고'};
   S.venues=o.venues||[];
-  S.venues.forEach(function(v){S.locNames[v.id]=v.name;});
+  // active 필드 없으면 기본 true
+  S.venues.forEach(function(v){
+    if(v.active===undefined)v.active=true;
+    S.locNames[v.id]=v.name;
+  });
   ['whiskey','beer'].forEach(function(cat){
     const src=o[cat]||{};
     S[cat].products=src.products||[];
     S[cat].c4=src.c4||{};
     S[cat].stocks=src.stocks||{};
     S[cat].transfers=src.transfers||[];
-    // 신규 품목 stocks 초기화
     S[cat].products.forEach(function(p){
       if(!S[cat].stocks[p])S[cat].stocks[p]={};
       S.venues.forEach(function(v){
@@ -442,15 +443,15 @@ function rebuildTabs(){
   tabsEl.innerHTML='';
   // C4 탭
   addTabBtn(tabsEl,'c4',locName('c4'),true);
-  // 업장 탭
-  S.venues.forEach(function(v){ addTabBtn(tabsEl,v.id,v.name,false); });
+  // 활성 업장 탭만
+  activeVenues().forEach(function(v){ addTabBtn(tabsEl,v.id,v.name,false); });
   // 고정 탭들
   ['transfer','summary','daily','settings'].forEach(function(name){
     const labels={transfer:'이동 내역',summary:'전체 현황',daily:'일별 현황',settings:'⚙ 설정'};
     addTabBtn(tabsEl,name,labels[name],false);
   });
 
-  // 업장 탭 컨텐츠 재생성
+  // 업장 탭 컨텐츠 — 모든 업장(비활성 포함) 섹션 생성 (데이터 보존)
   contEl.innerHTML='';
   addLocSection(contEl,'c4');
   S.venues.forEach(function(v){ addLocSection(contEl,v.id); });
@@ -499,6 +500,14 @@ function addVenue(){
   });
   document.getElementById('new-venue-name').value='';
   saveState();rebuildTabs();render();showToast(nm+' 업장 추가됨');
+}
+
+function toggleVenue(id){
+  const v=S.venues.find(x=>x.id===id);
+  if(!v)return;
+  v.active=!v.active;
+  saveState();rebuildTabs();render();
+  showToast(v.name+' '+(v.active?'활성화':'비활성화')+'됨');
 }
 
 function deleteVenue(id){
@@ -737,7 +746,7 @@ function fillLocSelect(id, excludeLoc, includeExternal){
   const el=document.getElementById(id);if(!el)return;
   const cur=el.value;el.innerHTML='';
   if(includeExternal){const o=document.createElement('option');o.value='외부';o.textContent='외부';el.appendChild(o);}
-  const locs=[{id:'c4',name:locName('c4')}].concat(S.venues.map(v=>({id:v.id,name:v.name})));
+  const locs=[{id:'c4',name:locName('c4')}].concat(activeVenues().map(v=>({id:v.id,name:v.name})));
   locs.forEach(function(l){
     if(l.id===excludeLoc)return;
     const o=document.createElement('option');o.value=l.id;o.textContent=l.name;
@@ -918,7 +927,7 @@ function renderSummary(){
     const thStyle='position:sticky;top:0;background:#f5f5f3;z-index:2;padding:8px 10px;font-weight:500;font-size:12px;color:#888;border-bottom:1px solid #e8e8e0;white-space:nowrap';
     const thFirstStyle=thStyle+';left:0;z-index:3';
     let hh='<tr><th style="'+thFirstStyle+'">품목</th><th style="'+thStyle+';text-align:right">사입</th><th style="'+thStyle+';text-align:right">C4 재고</th>';
-    S.venues.forEach(function(v){hh+='<th style="'+thStyle+';text-align:right">'+v.name+' 재고</th>';});
+    activeVenues().forEach(function(v){hh+='<th style="'+thStyle+';text-align:right">'+v.name+' 재고</th>';});
     hh+='<th style="'+thStyle+';text-align:right">기타 소진</th><th style="'+thStyle+';text-align:right">판매</th></tr>';
     head.innerHTML=hh;
   }
@@ -932,14 +941,14 @@ function renderSummary(){
     const sold=filtered.filter(t=>t.product===p&&t.type==='sell').reduce((a,t)=>a+t.qty,0);
     const etc=filtered.filter(t=>t.product===p&&(t.type==='etc')).reduce((a,t)=>a+t.qty,0);
     const c4s=getC4Stock(p);
-    const locStocks=S.venues.map(v=>getLocStock(p,v.id));
+    const locStocks=activeVenues().map(v=>getLocStock(p,v.id));
     return{p,bought,sold,etc,c4s,locStocks};
   });
   const tBought=rows.reduce((a,r)=>a+r.bought,0);
   const tSold=rows.reduce((a,r)=>a+r.sold,0);
   const tEtc=rows.reduce((a,r)=>a+r.etc,0);
   const tC4s=rows.reduce((a,r)=>a+r.c4s,0);
-  const tLoc=S.venues.map((_,i)=>rows.reduce((a,r)=>a+r.locStocks[i],0));
+  const tLoc=activeVenues().map((_,i)=>rows.reduce((a,r)=>a+r.locStocks[i],0));
   const stickyTd='position:sticky;left:0;background:#fff;z-index:1;padding:9px 10px;border-bottom:1px solid #f0f0e8;';
   let html=rows.map(function(r){
     let tr='<tr><td style="'+stickyTd+'"><b>'+r.p+'</b></td><td style="text-align:right">'+r.bought+'</td><td style="text-align:right">'+r.c4s+'</td>';
@@ -952,13 +961,15 @@ function renderSummary(){
   tLoc.forEach(function(s){html+='<td style="text-align:right">'+s+'</td>';});
   html+='<td style="text-align:right">'+tEtc+'</td><td style="text-align:right">'+tSold+'</td></tr>';
   document.getElementById('summary-table').innerHTML=html;
+  document.getElementById('summary-table').previousElementSibling&&
+    (document.getElementById('summary-table').closest('table').querySelector('colgroup') );
 }
 
 // ── 일별 현황 ──────────────────────────────────────────
 function initDailyLocSelect(){
   const el=document.getElementById('daily-loc');if(!el)return;
   const cur=el.value;el.innerHTML='';
-  const locs=[{id:'c4',name:locName('c4')}].concat(S.venues.map(v=>({id:v.id,name:v.name})));
+  const locs=[{id:'c4',name:locName('c4')}].concat(activeVenues().map(v=>({id:v.id,name:v.name})));
   locs.forEach(function(l){
     const o=document.createElement('option');o.value=l.id;o.textContent=l.name;
     if(l.id===cur)o.selected=true;
@@ -1109,7 +1120,9 @@ function renderSettings(){
   const vl=document.getElementById('venue-list');
   if(vl){
     vl.innerHTML=S.venues.map(function(v){
-      return '<div class="setting-row"><span style="font-size:13px;color:#888;min-width:60px">업장</span><input type="text" id="set-name-'+v.id+'" value="'+v.name+'" style="max-width:200px"/><button class="btn btn-sm" onclick="saveLocName(\''+v.id+'\')">저장</button><button class="btn btn-sm btn-danger" onclick="deleteVenue(\''+v.id+'\')">삭제</button></div>';
+      const isActive=v.active!==false;
+      const toggleBtn='<button class="btn btn-sm" style="'+(isActive?'color:#1a7a3c;border-color:#a8dfc0':'color:#888;border-color:#d0d0c8')+'" onclick="toggleVenue(\''+v.id+'\')">'+(isActive?'✓ 활성':'○ 비활성')+'</button>';
+      return '<div class="setting-row"><span style="font-size:13px;color:#888;min-width:60px">업장</span><input type="text" id="set-name-'+v.id+'" value="'+v.name+'" style="max-width:160px"/><button class="btn btn-sm" onclick="saveLocName(\''+v.id+'\')">저장</button>'+toggleBtn+'<button class="btn btn-sm btn-danger" onclick="deleteVenue(\''+v.id+'\')">삭제</button></div>';
     }).join('')||'<div style="font-size:13px;color:#aaa;padding:10px 0">등록된 업장이 없습니다</div>';
   }
   // 품목 목록
