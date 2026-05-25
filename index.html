@@ -158,7 +158,7 @@ tr:hover td{background:#fafaf8}
   </div>
   <div class="card">
     <div class="section-title">품목별 현황</div>
-    <div class="table-wrap" style="max-height:500px;overflow:auto"><table>
+    <div class="table-wrap" style="overflow:auto"><table>
       <thead id="summary-head"></thead>
       <tbody id="summary-table"><tr><td colspan="6" class="msg">등록된 품목이 없습니다</td></tr></tbody>
     </table></div>
@@ -916,7 +916,8 @@ function renderSummary(){
   const head=document.getElementById('summary-head');
   if(head){
     const thStyle='position:sticky;top:0;background:#f5f5f3;z-index:2;padding:8px 10px;font-weight:500;font-size:12px;color:#888;border-bottom:1px solid #e8e8e0;white-space:nowrap';
-    let hh='<tr><th style="'+thStyle+'">품목</th><th style="'+thStyle+';text-align:right">사입</th><th style="'+thStyle+';text-align:right">C4 재고</th>';
+    const thFirstStyle=thStyle+';left:0;z-index:3';
+    let hh='<tr><th style="'+thFirstStyle+'">품목</th><th style="'+thStyle+';text-align:right">사입</th><th style="'+thStyle+';text-align:right">C4 재고</th>';
     S.venues.forEach(function(v){hh+='<th style="'+thStyle+';text-align:right">'+v.name+' 재고</th>';});
     hh+='<th style="'+thStyle+';text-align:right">기타 소진</th><th style="'+thStyle+';text-align:right">판매</th></tr>';
     head.innerHTML=hh;
@@ -939,14 +940,15 @@ function renderSummary(){
   const tEtc=rows.reduce((a,r)=>a+r.etc,0);
   const tC4s=rows.reduce((a,r)=>a+r.c4s,0);
   const tLoc=S.venues.map((_,i)=>rows.reduce((a,r)=>a+r.locStocks[i],0));
+  const stickyTd='position:sticky;left:0;background:#fff;z-index:1;padding:9px 10px;border-bottom:1px solid #f0f0e8;';
   let html=rows.map(function(r){
-    let tr='<tr><td><b>'+r.p+'</b></td><td style="text-align:right">'+r.bought+'</td><td style="text-align:right">'+r.c4s+'</td>';
+    let tr='<tr><td style="'+stickyTd+'"><b>'+r.p+'</b></td><td style="text-align:right">'+r.bought+'</td><td style="text-align:right">'+r.c4s+'</td>';
     r.locStocks.forEach(function(s){tr+='<td style="text-align:right">'+s+'</td>';});
     tr+='<td style="text-align:right">'+r.etc+'</td><td style="text-align:right">'+r.sold+'</td></tr>';
     return tr;
   }).join('');
   html+='<tr style="border-top:2px solid #d0d0c8;background:#f5f5f3;font-weight:600">';
-  html+='<td>TOTAL</td><td style="text-align:right">'+tBought+'</td><td style="text-align:right">'+tC4s+'</td>';
+  html+='<td style="position:sticky;left:0;background:#f5f5f3;z-index:1;padding:9px 10px">TOTAL</td><td style="text-align:right">'+tBought+'</td><td style="text-align:right">'+tC4s+'</td>';
   tLoc.forEach(function(s){html+='<td style="text-align:right">'+s+'</td>';});
   html+='<td style="text-align:right">'+tEtc+'</td><td style="text-align:right">'+tSold+'</td></tr>';
   document.getElementById('summary-table').innerHTML=html;
