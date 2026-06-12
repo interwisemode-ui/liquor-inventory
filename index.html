@@ -1017,6 +1017,7 @@ function downloadDailyExcel(){
 }
 
 function renderSummary(){
+  const {from,to}=getRange();
   const prods=C().products;
   const note=document.getElementById('filter-active-note');
   if(note){
