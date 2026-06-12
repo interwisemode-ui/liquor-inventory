@@ -179,6 +179,7 @@ tr:hover td{background:#fafaf8}
         <select id="daily-loc" style="width:160px;padding:8px 10px;font-size:14px;border:1px solid #d0d0c8;border-radius:8px" onchange="renderDaily()"></select>
       </div>
       <button class="btn btn-primary" style="height:38px;align-self:flex-end" onclick="renderDaily()">조회</button>
+      <button class="btn" style="height:38px;align-self:flex-end" onclick="downloadDailyExcel()">⬇ 엑셀</button>
     </div>
     <div style="font-size:12px;color:#888;margin-bottom:10px">
       셀: <b style="color:#1a1a1a">재고</b> &nbsp;
@@ -936,8 +937,86 @@ function renderLocTab(locId){
 }
 
 // ── 전체 현황 렌더 ─────────────────────────────────────
+function downloadDailyExcel(){
+  const monthEl=document.getElementById('daily-month');
+  const locEl=document.getElementById('daily-loc');
+  if(!monthEl||!monthEl.value){showToast('먼저 조회해주세요');return;}
+
+  const parts=monthEl.value.split('-');
+  const year=parseInt(parts[0]),month=parseInt(parts[1]);
+  const loc=locEl?locEl.value:'c4';
+  const prods=C().products;
+  if(!prods.length){showToast('등록된 품목이 없습니다');return;}
+
+  const daysInMonth=new Date(year,month,0).getDate();
+  function pad2(n){return String(n).padStart(2,'0');}
+  function ds(d){return year+'-'+pad2(month)+'-'+pad2(d);}
+
+  function stockOnDay(p,d){
+    const dateStr=ds(d);
+    if(loc==='c4'){
+      const bought=C().transfers.filter(function(t){return t.product===p&&t.type==='buy'&&t.date<=dateStr;}).reduce(function(a,t){return a+t.qty;},0);
+      const initBought=(C().c4[p]?C().c4[p].bought||0:0)-C().transfers.filter(function(t){return t.product===p&&t.type==='buy';}).reduce(function(a,t){return a+t.qty;},0);
+      const out=C().transfers.filter(function(t){return t.product===p&&t.fromLoc==='c4'&&t.type==='transfer'&&t.date<=dateStr;}).reduce(function(a,t){return a+t.qty;},0);
+      const back=C().transfers.filter(function(t){return t.product===p&&t.toLoc==='c4'&&t.type==='transfer'&&t.date<=dateStr;}).reduce(function(a,t){return a+t.qty;},0);
+      const etc=C().transfers.filter(function(t){return t.product===p&&t.fromLoc==='c4'&&t.type==='etc'&&t.date<=dateStr;}).reduce(function(a,t){return a+t.qty;},0);
+      return Math.max(0,initBought)+bought-out+back-etc;
+    }
+    const init=(C().stocks[p]&&C().stocks[p][loc])?C().stocks[p][loc].init||0:0;
+    const inQty=C().transfers.filter(function(t){return t.product===p&&t.toLoc===loc&&(t.type==='transfer'||t.type==='direct')&&t.date<=dateStr;}).reduce(function(a,t){return a+t.qty;},0);
+    const outQty=C().transfers.filter(function(t){return t.product===p&&t.fromLoc===loc&&t.type==='transfer'&&t.date<=dateStr;}).reduce(function(a,t){return a+t.qty;},0);
+    const sold=C().transfers.filter(function(t){return t.product===p&&t.fromLoc===loc&&t.type==='sell'&&t.date<=dateStr;}).reduce(function(a,t){return a+t.qty;},0);
+    const etc=C().transfers.filter(function(t){return t.product===p&&t.fromLoc===loc&&t.type==='etc'&&t.date<=dateStr;}).reduce(function(a,t){return a+t.qty;},0);
+    return init+inQty-outQty-sold-etc;
+  }
+
+  function inOnDay(p,d){
+    const dateStr=ds(d);
+    if(loc==='c4') return C().transfers.filter(function(t){return t.product===p&&t.type==='buy'&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
+    return C().transfers.filter(function(t){return t.product===p&&t.toLoc===loc&&(t.type==='transfer'||t.type==='direct')&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
+  }
+
+  function outOnDay(p,d){
+    const dateStr=ds(d);
+    if(loc==='c4') return C().transfers.filter(function(t){return t.product===p&&t.fromLoc==='c4'&&(t.type==='transfer'||t.type==='etc')&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
+    return C().transfers.filter(function(t){return t.product===p&&t.fromLoc===loc&&(t.type==='sell'||t.type==='etc'||t.type==='transfer')&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
+  }
+
+  // CSV 생성
+  const locLabel=locName(loc);
+  let csv='\uFEFF'; // BOM for Korean
+  // 헤더: 날짜, 품목별 재고/입고/출고 3열씩
+  csv+='날짜';
+  prods.forEach(function(p){
+    csv+=','+p+'_재고,'+p+'_입고,'+p+'_출고';
+  });
+  csv+='\n';
+
+  for(var d=1;d<=daysInMonth;d++){
+    csv+=year+'/'+pad2(month)+'/'+pad2(d);
+    prods.forEach(function(p){
+      const stock=stockOnDay(p,d);
+      const inQ=inOnDay(p,d);
+      const outQ=outOnDay(p,d);
+      csv+=','+stock+','+inQ+','+outQ;
+    });
+    csv+='\n';
+  }
+
+  // 다운로드
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=year+'년'+pad2(month)+'월_'+locLabel+'_재고현황.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showToast('엑셀 파일 다운로드 완료!');
+}
+
 function renderSummary(){
-  const {from,to}=getRange();
   const prods=C().products;
   const note=document.getElementById('filter-active-note');
   if(note){
@@ -992,8 +1071,6 @@ function renderSummary(){
   html+='<td style="'+numTd+'">'+tEtc+'</td>';
   html+='<td style="'+numTd+';color:'+(tSold>0?'#c0392b':'#aaa')+'">'+tSold+'</td></tr>';
   document.getElementById('summary-table').innerHTML=html;
-  document.getElementById('summary-table').previousElementSibling&&
-    (document.getElementById('summary-table').closest('table').querySelector('colgroup') );
 }
 
 // ── 일별 현황 ──────────────────────────────────────────
