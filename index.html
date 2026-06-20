@@ -898,7 +898,7 @@ function renderLocTab(locId){
   html+='<div><label>수량</label><input type="number" id="'+locId+'-etc-q" min="1" placeholder="0"/></div>';
   html+='</div>';
   html+='<div style="margin-bottom:10px"><label>사유</label><div class="reason-wrap">';
-  const etcOpts=isC4?['업주 소진','선물','시음','파손']:['서비스','파손','업주 소진','시음'];
+  const etcOpts=isC4?['업주 소진','매니저','선물','시음','파손']:['서비스','파손','업주 소진','매니저','시음'];
   html+='<select id="'+locId+'-etc-reason-sel" onchange="syncReason(\''+locId+'-etc\')">';
   etcOpts.forEach(function(o){html+='<option value="'+o+'">'+o+'</option>';});
   html+='<option value="직접 입력">직접 입력...</option>';
@@ -976,19 +976,37 @@ function downloadDailyExcel(){
     return C().transfers.filter(function(t){return t.product===p&&t.toLoc===loc&&(t.type==='transfer'||t.type==='direct')&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
   }
 
-  function outOnDay(p,d){
+  // 출고 사유별 분리: 판매 / 업주 / 매니저 / 서비스(+기타 모든 소진사유)
+  function sellOnDay(p,d){
     const dateStr=ds(d);
-    if(loc==='c4') return C().transfers.filter(function(t){return t.product===p&&t.fromLoc==='c4'&&(t.type==='transfer'||t.type==='etc')&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
-    return C().transfers.filter(function(t){return t.product===p&&t.fromLoc===loc&&(t.type==='sell'||t.type==='etc'||t.type==='transfer')&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
+    if(loc==='c4') return 0;
+    return C().transfers.filter(function(t){return t.product===p&&t.fromLoc===loc&&t.type==='sell'&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
+  }
+  function reasonOnDay(p,d,reasonMatch){
+    const dateStr=ds(d);
+    const fromLoc=loc==='c4'?'c4':loc;
+    return C().transfers.filter(function(t){
+      return t.product===p&&t.fromLoc===fromLoc&&t.type==='etc'&&t.date===dateStr&&reasonMatch(t.reason||'');
+    }).reduce(function(a,t){return a+t.qty;},0);
+  }
+  function ownerOnDay(p,d){ return reasonOnDay(p,d,function(r){return r==='업주 소진';}); }
+  function managerOnDay(p,d){ return reasonOnDay(p,d,function(r){return r==='매니저';}); }
+  function serviceOnDay(p,d){ return reasonOnDay(p,d,function(r){return r!=='업주 소진'&&r!=='매니저';}); } // 서비스/파손/시음/선물/직접입력 등 나머지 전부
+
+  // 이동 출고(다른 장소로 나간 것)도 별도 집계 — C4는 업장 출고, 업장은 다른 업장으로 이동
+  function moveOutOnDay(p,d){
+    const dateStr=ds(d);
+    if(loc==='c4') return C().transfers.filter(function(t){return t.product===p&&t.fromLoc==='c4'&&t.type==='transfer'&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
+    return C().transfers.filter(function(t){return t.product===p&&t.fromLoc===loc&&t.type==='transfer'&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
   }
 
   // CSV 생성
   const locLabel=locName(loc);
   let csv='\uFEFF'; // BOM for Korean
-  // 헤더: 날짜, 품목별 재고/입고/출고 3열씩
+  // 헤더: 날짜, 품목별 재고/입고/판매/업주/매니저/서비스/이동출고 7열씩
   csv+='날짜';
   prods.forEach(function(p){
-    csv+=','+p+'_재고,'+p+'_입고,'+p+'_출고';
+    csv+=','+p+'_재고,'+p+'_입고,'+p+'_판매,'+p+'_업주,'+p+'_매니저,'+p+'_서비스,'+p+'_이동출고';
   });
   csv+='\n';
 
@@ -997,8 +1015,12 @@ function downloadDailyExcel(){
     prods.forEach(function(p){
       const stock=stockOnDay(p,d);
       const inQ=inOnDay(p,d);
-      const outQ=outOnDay(p,d);
-      csv+=','+stock+','+inQ+','+outQ;
+      const sellQ=sellOnDay(p,d);
+      const ownerQ=ownerOnDay(p,d);
+      const managerQ=managerOnDay(p,d);
+      const serviceQ=serviceOnDay(p,d);
+      const moveQ=moveOutOnDay(p,d);
+      csv+=','+stock+','+inQ+','+sellQ+','+ownerQ+','+managerQ+','+serviceQ+','+moveQ;
     });
     csv+='\n';
   }
