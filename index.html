@@ -605,6 +605,7 @@ function buyStock(locId){
   if(q<=0){showToast('수량을 입력하세요');return;}
   C().c4[p].bought=(C().c4[p].bought||0)+q;
   C().transfers.unshift({date:d,product:p,fromLoc:'외부',toLoc:'c4',qty:q,type:'buy',reason:null});
+  window['_savedDate_'+locId+'_buy']=d;
   document.getElementById(locId+'-buy-q').value='';
   saveState();render();showToast(p+' '+q+'병 입고');
 }
@@ -627,6 +628,7 @@ function directIn(locId){
   if(!p){showToast('품목을 선택하세요');return;}
   if(q<=0){showToast('수량을 입력하세요');return;}
   C().transfers.unshift({date:d,product:p,fromLoc:fromSrc,toLoc:locId,qty:q,type:'direct',reason:fromSrc+' 직접 입고'});
+  window['_savedDate_'+locId+'_direct']=d;
   document.getElementById(locId+'-direct-q').value='';
   saveState();render();showToast(p+' '+q+'병 직접 입고 ('+fromSrc+')');
 }
@@ -640,6 +642,7 @@ function sellStock(locId){
   const st=getStock(p,locId);
   if(q>st){showToast('재고 부족 (현재 '+st+'병)');return;}
   C().transfers.unshift({date:d,product:p,fromLoc:locId,toLoc:'판매',qty:q,type:'sell',reason:'판매'});
+  window['_savedDate_'+locId+'_sell']=d;
   document.getElementById(locId+'-sell-q').value='';
   saveState();render();showToast(p+' '+q+'병 판매');
 }
@@ -657,6 +660,7 @@ function etcConsume(locId){
   if(q>st){showToast('재고 부족 (현재 '+st+'병)');return;}
   if(locId==='c4')C().c4[p].outEtc=(C().c4[p].outEtc||0)+q;
   C().transfers.unshift({date:d,product:p,fromLoc:locId,toLoc:'소진',qty:q,type:'etc',reason});
+  window['_savedDate_'+locId+'_etc']=d;
   document.getElementById(locId+'-etc-q').value='';
   saveState();render();showToast(p+' '+q+'병 소진 ('+reason+')');
 }
@@ -688,6 +692,7 @@ function doTransfer(){
   if(q>st){showToast(locName(from)+' 재고 부족 (현재 '+st+'병)');return;}
   // C4에서 나가는 경우 outEtc 대신 transfer로 처리
   C().transfers.unshift({date:d,product:p,fromLoc:from,toLoc:to,qty:q,type:'transfer',reason:null});
+  window['_savedDate_transfer']=d;
   document.getElementById('tr-q').value='';
   saveState();render();showToast(p+' '+q+'병 '+locName(from)+' → '+locName(to));
 }
@@ -929,10 +934,16 @@ function renderLocTab(locId){
   ['buy','direct','sell','etc','init'].forEach(function(action){
     fillSelect(locId+'-'+action+'-p', prodOpts);
   });
-  // 날짜 기본값
+  // 날짜 기본값 — 이미 입력된 날짜가 있으면 유지, 없을 때만 오늘로 세팅
   ['buy','direct','sell','etc'].forEach(function(action){
     const el2=document.getElementById(locId+'-'+action+'-date');
-    if(el2&&!el2.value)el2.value=today();
+    const savedDate=window['_savedDate_'+locId+'_'+action];
+    if(el2){
+      if(savedDate) el2.value=savedDate;
+      else if(!el2.value) el2.value=today();
+      // 날짜 변경 시 저장
+      el2.onchange=function(){window['_savedDate_'+locId+'_'+action]=el2.value;};
+    }
   });
 }
 
@@ -1231,7 +1242,12 @@ function renderTransfer(){
   fillSelect('tr-p',prods);
   fillLocSelect('tr-from',null,false);
   fillLocSelect('tr-to',null,false);
-  const el=document.getElementById('tr-date');if(el&&!el.value)el.value=today();
+  const el=document.getElementById('tr-date');
+  if(el){
+    if(window['_savedDate_transfer']) el.value=window['_savedDate_transfer'];
+    else if(!el.value) el.value=today();
+    el.onchange=function(){window['_savedDate_transfer']=el.value;};
+  }
   const typeTag={buy:'<span class="tag tag-buy">사입 입고</span>',transfer:'<span class="tag tag-transfer">이동</span>',direct:'<span class="tag tag-direct">직접 입고</span>',sell:'<span class="tag tag-sell">판매</span>',etc:'<span class="tag tag-etc">기타 소진</span>'};
   document.getElementById('tr-table').innerHTML=C().transfers.length
     ?C().transfers.map(function(t,i){
