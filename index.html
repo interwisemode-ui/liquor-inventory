@@ -168,26 +168,18 @@ tr:hover td{background:#fafaf8}
 <!-- 일별 현황 -->
 <div id="tab-daily" class="section">
   <div class="card">
-    <div class="section-title">일별 재고·판매 현황</div>
+    <div class="section-title">Daily Stock Overview</div>
     <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:flex-end;margin-bottom:14px">
       <div style="display:flex;flex-direction:column;gap:4px">
-        <label style="font-size:13px;color:#666">월 선택</label>
+        <label style="font-size:13px;color:#666">Month</label>
         <input type="month" id="daily-month" style="width:160px;padding:8px 10px;font-size:14px;border:1px solid #d0d0c8;border-radius:8px"/>
       </div>
       <div style="display:flex;flex-direction:column;gap:4px">
-        <label style="font-size:13px;color:#666">장소</label>
+        <label style="font-size:13px;color:#666">Venue</label>
         <select id="daily-loc" style="width:160px;padding:8px 10px;font-size:14px;border:1px solid #d0d0c8;border-radius:8px" onchange="renderDaily()"></select>
       </div>
-      <button class="btn btn-primary" style="height:38px;align-self:flex-end" onclick="renderDaily()">조회</button>
-      <button class="btn" style="height:38px;align-self:flex-end" onclick="downloadDailyExcel()">⬇ 엑셀</button>
-    </div>
-    <div style="font-size:12px;color:#888;margin-bottom:10px">
-      셀: <b style="color:#1a1a1a">재고</b> &nbsp;
-      <span style="color:#1a5ccf">+수량 출처</span> (입고/사입) &nbsp;
-      <span style="color:#c0392b">-수량 목적지</span> (판매/이동/소진) &nbsp;·&nbsp;
-      <span style="background:#f0faf4;padding:1px 6px;border-radius:4px;font-size:11px">정상</span>
-      <span style="background:#fffbf0;padding:1px 6px;border-radius:4px;font-size:11px">부족(3↓)</span>
-      <span style="background:#fff5f5;padding:1px 6px;border-radius:4px;font-size:11px">재고없음</span>
+      <button class="btn btn-primary" style="height:38px;align-self:flex-end" onclick="renderDaily()">View</button>
+      <button class="btn" style="height:38px;align-self:flex-end" onclick="downloadDailyExcel()">⬇ Excel</button>
     </div>
     <div class="table-wrap" id="daily-table-wrap" style="max-height:600px;overflow:auto"><div class="msg">월을 선택하고 조회 버튼을 눌러주세요</div></div>
   </div>
@@ -1015,7 +1007,7 @@ function downloadDailyExcel(){
   const locLabel=locName(loc);
   let csv='\uFEFF'; // BOM for Korean
   // 헤더: 날짜, 품목별 재고/입고/판매/업주/매니저/서비스/이동출고 7열씩
-  csv+='날짜';
+  csv+='Date';
   prods.forEach(function(p){
     csv+=','+p+'_재고,'+p+'_입고,'+p+'_판매,'+p+'_업주,'+p+'_매니저,'+p+'_서비스,'+p+'_이동출고';
   });
@@ -1081,9 +1073,9 @@ function renderSummary(){
     hh+='<th style="'+thStyle+';text-align:right">ETC</th>';
     activeVenues().forEach(function(v){
       if(dateLabel){
-        hh+='<th style="'+thStyle+';text-align:right;line-height:1.3">'+v.name+'<br><span style="font-size:10px;color:#aaa;font-weight:400">'+dateLabel.replace(/[()]/g,'').trim()+'</span></th>';
+        hh+='<th style="'+thStyle+';text-align:right;line-height:1.3">'+v.name+' Sold<br><span style="font-size:10px;color:#aaa;font-weight:400">'+dateLabel.replace(/[()]/g,'').trim()+'</span></th>';
       } else {
-        hh+='<th style="'+thStyle+';text-align:right">'+v.name+'</th>';
+        hh+='<th style="'+thStyle+';text-align:right">'+v.name+' Sold</th>';
       }
     });
     hh+='</tr>';
@@ -1177,7 +1169,7 @@ function renderDaily(){
     var details=[];
     if(loc==='c4'){
       var bq=C().transfers.filter(function(t){return t.product===p&&t.type==='buy'&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
-      if(bq>0)details.push({qty:bq,label:'사입'});
+      if(bq>0)details.push({qty:bq,label:'Buy'});
       // 업장에서 C4로 돌아오는 경우
       C().transfers.filter(function(t){return t.product===p&&t.toLoc==='c4'&&t.type==='transfer'&&t.date===dateStr;}).forEach(function(t){
         details.push({qty:t.qty,label:locName(t.fromLoc)+'→'});
@@ -1186,7 +1178,7 @@ function renderDaily(){
       // C4 또는 다른 업장에서 입고
       var groups={};
       C().transfers.filter(function(t){return t.product===p&&t.toLoc===loc&&(t.type==='transfer'||t.type==='direct')&&t.date===dateStr;}).forEach(function(t){
-        var lbl=t.type==='direct'?'직접':locName(t.fromLoc);
+        var lbl=t.type==='direct'?(t.reason?t.reason.replace(' 직접 입고',''):locName(t.fromLoc)):locName(t.fromLoc);
         groups[lbl]=(groups[lbl]||0)+t.qty;
       });
       Object.keys(groups).forEach(function(lbl){details.push({qty:groups[lbl],label:lbl});});
@@ -1208,11 +1200,10 @@ function renderDaily(){
       Object.keys(groups).forEach(function(lbl){details.push({qty:groups[lbl],label:lbl});});
       // 기타 소진
       var eq=C().transfers.filter(function(t){return t.product===p&&t.fromLoc==='c4'&&t.type==='etc'&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
-      if(eq>0)details.push({qty:eq,label:'소진'});
+      if(eq>0)details.push({qty:eq,label:'Etc'});
     } else {
-      // 판매
       var sq=C().transfers.filter(function(t){return t.product===p&&t.fromLoc===loc&&t.type==='sell'&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
-      if(sq>0)details.push({qty:sq,label:'판매'});
+      if(sq>0)details.push({qty:sq,label:'Sold'});
       // 다른 업장으로 이동
       var groups2={};
       C().transfers.filter(function(t){return t.product===p&&t.fromLoc===loc&&t.type==='transfer'&&t.date===dateStr;}).forEach(function(t){
@@ -1222,14 +1213,14 @@ function renderDaily(){
       Object.keys(groups2).forEach(function(lbl){details.push({qty:groups2[lbl],label:lbl});});
       // 기타 소진
       var eq2=C().transfers.filter(function(t){return t.product===p&&t.fromLoc===loc&&t.type==='etc'&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
-      if(eq2>0)details.push({qty:eq2,label:'소진'});
+      if(eq2>0)details.push({qty:eq2,label:'Etc'});
     }
     return details;
   }
   function cellBg(s){if(s<=0)return'#fff5f5';if(s<=3)return'#fffbf0';return'#f0faf4';}
   const td=today();
   var html='<table style="font-size:12px;border-collapse:collapse;min-width:100%"><thead><tr>';
-  html+='<th style="position:sticky;left:0;top:0;background:#f5f5f3;padding:8px 10px;border-bottom:1px solid #e8e8e0;border-right:1px solid #e0e0d8;white-space:nowrap;z-index:3;font-size:12px;color:#888">날짜</th>';
+  html+='<th style="position:sticky;left:0;top:0;background:#f5f5f3;padding:8px 10px;border-bottom:1px solid #e8e8e0;border-right:1px solid #e0e0d8;white-space:nowrap;z-index:3;font-size:12px;color:#888">Date</th>';
   prods.forEach(function(p){html+='<th style="position:sticky;top:0;padding:7px 8px;border-bottom:1px solid #e8e8e0;border-right:1px solid #f0f0e8;text-align:center;white-space:nowrap;font-size:12px;min-width:72px;background:#f5f5f3;z-index:2">'+p+'</th>';});
   html+='</tr></thead><tbody>';
   for(var d=1;d<=daysInMonth;d++){
