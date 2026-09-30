@@ -342,6 +342,7 @@ function migrateNew(o){
   ['whiskey','beer'].forEach(function(cat){
     const src=o[cat]||{};
     S[cat].products=src.products||[];
+    S[cat].hidden=src.hidden||[];
     S[cat].c4=src.c4||{};
     S[cat].stocks=src.stocks||{};
     S[cat].transfers=src.transfers||[];
@@ -541,6 +542,20 @@ function addProduct(){
   C().stocks[name]={};
   S.venues.forEach(function(v){C().stocks[name][v.id]={init:0,in:0,sold:0,etc:0};});
   closeModal('product');saveState();rebuildTabs();render();showToast(name+' registered');
+}
+
+function visibleProducts(){
+  const hidden=C().hidden||[];
+  return C().products.filter(function(p){return !hidden.includes(p);});
+}
+
+function toggleHideProduct(idx){
+  const p=C().products[idx];
+  if(!C().hidden)C().hidden=[];
+  const hi=C().hidden.indexOf(p);
+  if(hi>=0){C().hidden.splice(hi,1);showToast(p+' shown');}
+  else{C().hidden.push(p);showToast(p+' hidden');}
+  saveState();render();
 }
 
 function renameProduct(idx){
@@ -948,7 +963,7 @@ function downloadDailyExcel(){
   const parts=monthEl.value.split('-');
   const year=parseInt(parts[0]),month=parseInt(parts[1]);
   const loc=locEl?locEl.value:'c4';
-  const prods=C().products;
+  const prods=visibleProducts();
   if(!prods.length){showToast('No items registered');return;}
 
   const daysInMonth=new Date(year,month,0).getDate();
@@ -1043,7 +1058,7 @@ function downloadDailyExcel(){
 
 function renderSummary(){
   const {from,to}=getRange();
-  const prods=C().products;
+  const prods=visibleProducts();
   const note=document.getElementById('filter-active-note');
   if(note){
     if(!from&&!to)note.textContent='현재: 전체 기간';
@@ -1142,7 +1157,7 @@ function renderDaily(){
   const parts=monthEl.value.split('-');
   const year=parseInt(parts[0]),month=parseInt(parts[1]);
   const loc=locEl?locEl.value:'c4';
-  const prods=C().products;
+  const prods=visibleProducts();
   if(!prods.length){wrap.innerHTML='<div class="msg">등록된 품목이 없습니다</div>';return;}
   const daysInMonth=new Date(year,month,0).getDate();
   function ds(d){return year+'-'+pad(month)+'-'+pad(d);}
@@ -1252,7 +1267,7 @@ function renderDaily(){
 
 // ── 이동 내역 렌더 ─────────────────────────────────────
 function renderTransfer(){
-  const prods=C().products;
+  const prods=visibleProducts();
   fillSelect('tr-p',prods);
   fillLocSelect('tr-from',null,false);
   fillLocSelect('tr-to',null,false);
@@ -1292,9 +1307,12 @@ function renderSettings(){
   if(ptitle)ptitle.textContent=cat+' 품목 이름 변경 · 삭제';
   const pl=document.getElementById('product-list');
   if(pl){
+    const hidden=C().hidden||[];
     pl.innerHTML=C().products.length
       ?C().products.map(function(p,i){
-        return '<div class="product-row"><input type="text" id="ri-'+i+'" value="'+p+'" style="flex:1;max-width:220px"/><button class="btn btn-sm" onclick="renameProduct('+i+')">이름 변경</button><button class="btn btn-sm btn-danger" onclick="deleteProduct('+i+')">삭제</button></div>';
+        const isHidden=hidden.includes(p);
+        const hideBtn='<button class="btn btn-sm" style="'+(isHidden?'color:#888;border-color:#d0d0c8':'color:#1a7a3c;border-color:#a8dfc0')+'" onclick="toggleHideProduct('+i+')">'+(isHidden?'○ Hidden':'✓ Visible')+'</button>';
+        return '<div class="product-row" style="opacity:'+(isHidden?'0.5':'1')+'"><input type="text" id="ri-'+i+'" value="'+p+'" style="flex:1;max-width:180px"/><button class="btn btn-sm" onclick="renameProduct('+i+')">Rename</button>'+hideBtn+'<button class="btn btn-sm btn-danger" onclick="deleteProduct('+i+')">Delete</button></div>';
       }).join('')
       :'<div style="font-size:13px;color:#aaa;padding:12px 0">등록된 품목이 없습니다</div>';
   }
