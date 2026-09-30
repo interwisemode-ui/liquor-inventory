@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>주류 재고관리</title>
+<title>Liquor Inventory</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI','Noto Sans KR',sans-serif;background:#f5f5f3;color:#1a1a1a;font-size:15px}
@@ -81,16 +81,16 @@ tr:hover td{background:#fafaf8}
 
 <header>
   <div>
-    <h1>주류 재고관리</h1>
+    <h1>Liquor Inventory</h1>
     <div class="sub" id="header-sub"></div>
   </div>
-  <button class="btn btn-primary" onclick="openModal('product')">+ 품목 등록</button>
+  <button class="btn btn-primary" onclick="openModal('product')">+ Add Item</button>
 </header>
 <div id="sync-status" style="font-size:12px;color:#aaa;margin-bottom:12px;text-align:right">☁️ 클라우드 연결 중...</div>
 
 <div class="cat-switch">
-  <button class="cat-btn active" id="cat-whiskey" onclick="switchCat('whiskey')">🥃 위스키</button>
-  <button class="cat-btn" id="cat-beer" onclick="switchCat('beer')">🍺 비어</button>
+  <button class="cat-btn active" id="cat-whiskey" onclick="switchCat('whiskey')">🥃 Whiskey</button>
+  <button class="cat-btn" id="cat-beer" onclick="switchCat('beer')">🍺 Beer</button>
 </div>
 
 <div class="tabs" id="main-tabs">
@@ -113,7 +113,7 @@ tr:hover td{background:#fafaf8}
     </div>
     <div style="display:grid;grid-template-columns:1fr auto;gap:8px;align-items:flex-end">
       <div><label>수량</label><input type="number" id="tr-q" min="1" placeholder="0"/></div>
-      <button class="btn btn-primary" style="height:38px" onclick="doTransfer()">이동</button>
+      <button class="btn btn-primary" style="height:38px" onclick="doTransfer()">Move</button>
     </div>
   </div>
   <div class="card">
@@ -146,7 +146,7 @@ tr:hover td{background:#fafaf8}
       <button class="btn btn-sm"            id="pre-today"     onclick="setPreset('today')">오늘</button>
       <button class="btn btn-sm"            id="pre-week"      onclick="setPreset('week')">이번 주</button>
       <button class="btn btn-sm"            id="pre-month"     onclick="setPreset('month')">이번 달</button>
-      <button class="btn btn-sm"            id="pre-custom"    onclick="setPreset('custom')">직접 설정</button>
+      <button class="btn btn-sm"            id="pre-custom"    onclick="setPreset('custom')">Custom</button>
     </div>
     <div id="custom-range" style="display:none;grid-template-columns:1fr auto 1fr auto;gap:8px;align-items:flex-end">
       <div><label>시작일</label><input type="date" id="sum-from"/></div>
@@ -213,7 +213,7 @@ tr:hover td{background:#fafaf8}
 <!-- 품목 등록 모달 -->
 <div id="modal-product" class="modal-bg" style="display:none">
   <div class="modal-box">
-    <div style="font-size:16px;font-weight:600;margin-bottom:6px" id="modal-title">품목 등록</div>
+    <div style="font-size:16px;font-weight:600;margin-bottom:6px" id="modal-title">Add Item</div>
     <div style="font-size:12px;color:#888;margin-bottom:14px" id="modal-cat-label"></div>
     <label style="font-size:13px;color:#666;display:block;margin-bottom:4px">이름</label>
     <input type="text" id="new-product-name" placeholder="예: 발렌타인 17년" style="width:100%;margin-bottom:16px"/>
@@ -312,7 +312,7 @@ function migrateOld(o){
       return {
         date:t.date||today(),
         product:t.product,
-        fromLoc: t.type==='buy'?'외부': (t.type==='sell'||t.type==='etc'||t.type==='direct')?t.loc||'c4': 'c4',
+        fromLoc: t.type==='buy'?'External': (t.type==='sell'||t.type==='etc'||t.type==='direct')?t.loc||'c4': 'c4',
         toLoc:   t.type==='buy'?'c4': t.type==='transfer'?t.loc||'a2': t.type==='direct'?t.loc||'a2': t.type==='sell'?'판매': t.loc||'c4',
         qty:t.qty,
         type:t.type,
@@ -394,7 +394,7 @@ window._onFbData=function(data,isFirst){
   render();
   const st=document.getElementById('sync-status');
   if(st)st.textContent='☁️ 클라우드 연결됨 · '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
-  if(!isFirst)showToast('🔄 다른 멤버가 업데이트했어요');
+  if(!isFirst)showToast('🔄 Updated by another member');
 };
 
 // ── UI 헬퍼 ───────────────────────────────────────────
@@ -447,7 +447,7 @@ function rebuildTabs(){
   activeVenues().forEach(function(v){ addTabBtn(tabsEl,v.id,v.name,false); });
   // 고정 탭들
   ['transfer','summary','daily','settings'].forEach(function(name){
-    const labels={transfer:'이동 내역',summary:'전체 현황',daily:'일별 현황',settings:'⚙ 설정'};
+    const labels={transfer:'Transfer',summary:'Overview',daily:'Daily',settings:'⚙ Settings'};
     addTabBtn(tabsEl,name,labels[name],false);
   });
 
@@ -477,7 +477,7 @@ function addLocSection(container,locId){
 // ── 장소 관리 ──────────────────────────────────────────
 function saveLocName(id){
   const val=document.getElementById('set-name-'+id).value.trim();
-  if(!val){showToast('이름을 입력하세요');return;}
+  if(!val){showToast('Enter a name');return;}
   S.locNames[id]=val;
   const v=S.venues.find(x=>x.id===id);
   if(v)v.name=val;
@@ -486,7 +486,7 @@ function saveLocName(id){
 
 function addVenue(){
   const nm=document.getElementById('new-venue-name').value.trim();
-  if(!nm){showToast('업장 이름을 입력하세요');return;}
+  if(!nm){showToast('Enter venue name');return;}
   // ID 생성
   const id='v'+Date.now();
   S.venues.push({id,name:nm});
@@ -512,7 +512,7 @@ function toggleVenue(id){
 
 function deleteVenue(id){
   const v=S.venues.find(x=>x.id===id);
-  if(!confirm('"'+v.name+'" 업장을 삭제할까요?\n해당 업장의 모든 재고·이동 내역이 함께 삭제됩니다.'))return;
+  if(!confirm('Delete venue "'+v.name+'"?\nAll stock and transfer records will be deleted.'))return;
   S.venues=S.venues.filter(x=>x.id!==id);
   delete S.locNames[id];
   ['whiskey','beer'].forEach(function(cat){
@@ -521,34 +521,34 @@ function deleteVenue(id){
     });
     S[cat].transfers=S[cat].transfers.filter(t=>t.fromLoc!==id&&t.toLoc!==id);
   });
-  saveState();rebuildTabs();render();showToast(v.name+' 삭제됨');
+  saveState();rebuildTabs();render();showToast(v.name+' deleted');
 }
 
 // ── 품목 관리 ──────────────────────────────────────────
 function openModal_product(){
-  document.getElementById('modal-title').textContent=(currentCat==='whiskey'?'위스키':'비어')+' 등록';
-  document.getElementById('modal-cat-label').textContent=currentCat==='whiskey'?'🥃 위스키':'🍺 비어';
+  document.getElementById('modal-title').textContent=(currentCat==='whiskey'?'Whiskey':'Beer')+' Registration';
+  document.getElementById('modal-cat-label').textContent=currentCat==='whiskey'?'🥃 Whiskey':'🍺 Beer';
   document.getElementById('new-product-name').value='';
   openModal('product');
 }
 
 function addProduct(){
   const name=document.getElementById('new-product-name').value.trim();
-  if(!name){showToast('이름을 입력하세요');return;}
-  if(C().products.includes(name)){showToast('이미 등록된 품목입니다');return;}
+  if(!name){showToast('Enter a name');return;}
+  if(C().products.includes(name)){showToast('Already registered');return;}
   C().products.push(name);
   C().c4[name]={bought:0,outEtc:0};
   C().stocks[name]={};
   S.venues.forEach(function(v){C().stocks[name][v.id]={init:0,in:0,sold:0,etc:0};});
-  closeModal('product');saveState();rebuildTabs();render();showToast(name+' 등록됨');
+  closeModal('product');saveState();rebuildTabs();render();showToast(name+' registered');
 }
 
 function renameProduct(idx){
   const oldName=C().products[idx];
   const newName=document.getElementById('ri-'+idx).value.trim();
-  if(!newName){showToast('이름을 입력하세요');return;}
-  if(newName===oldName){showToast('같은 이름입니다');return;}
-  if(C().products.includes(newName)){showToast('이미 존재하는 이름입니다');return;}
+  if(!newName){showToast('Enter a name');return;}
+  if(newName===oldName){showToast('Same name');return;}
+  if(C().products.includes(newName)){showToast('Name already exists');return;}
   C().products[idx]=newName;
   C().c4[newName]=C().c4[oldName];delete C().c4[oldName];
   C().stocks[newName]=C().stocks[oldName];delete C().stocks[oldName];
@@ -558,11 +558,11 @@ function renameProduct(idx){
 
 function deleteProduct(idx){
   const name=C().products[idx];
-  if(!confirm('"'+name+'" 품목을 삭제할까요?'))return;
+  if(!confirm('Delete item "'+name+'"?'))return;
   C().products.splice(idx,1);
   delete C().c4[name];delete C().stocks[name];
   C().transfers=C().transfers.filter(t=>t.product!==name);
-  saveState();render();showToast(name+' 삭제됨');
+  saveState();render();showToast(name+' deleted');
 }
 
 // ── 재고 계산 ──────────────────────────────────────────
@@ -593,21 +593,21 @@ function buyStock(locId){
   const p=document.getElementById(locId+'-buy-p').value;
   const d=document.getElementById(locId+'-buy-date').value||today();
   const q=parseInt(document.getElementById(locId+'-buy-q').value)||0;
-  if(!p){showToast('품목을 선택하세요');return;}
-  if(q<=0){showToast('수량을 입력하세요');return;}
+  if(!p){showToast('Select an item');return;}
+  if(q<=0){showToast('Enter quantity');return;}
   C().c4[p].bought=(C().c4[p].bought||0)+q;
-  C().transfers.unshift({date:d,product:p,fromLoc:'외부',toLoc:'c4',qty:q,type:'buy',reason:null});
+  C().transfers.unshift({date:d,product:p,fromLoc:'External',toLoc:'c4',qty:q,type:'buy',reason:null});
   window['_savedDate_'+locId+'_buy']=d;
   document.getElementById(locId+'-buy-q').value='';
-  saveState();render();showToast(p+' '+q+'병 입고');
+  saveState();render();showToast(p+' '+q+'pcs Stocked In');
 }
 
 function syncDirectFrom(locId){
   const sel=document.getElementById(locId+'-direct-from');
   const txt=document.getElementById(locId+'-direct-from-txt');
   if(!sel||!txt)return;
-  txt.style.display=sel.value==='직접 입력'?'':'none';
-  if(sel.value==='직접 입력')txt.focus();
+  txt.style.display=sel.value==='Custom'?'':'none';
+  if(sel.value==='Custom')txt.focus();
 }
 
 function directIn(locId){
@@ -616,27 +616,27 @@ function directIn(locId){
   const q=parseInt(document.getElementById(locId+'-direct-q').value)||0;
   const selEl=document.getElementById(locId+'-direct-from');
   const txtEl=document.getElementById(locId+'-direct-from-txt');
-  const fromSrc=selEl?(selEl.value==='직접 입력'?(txtEl?txtEl.value.trim()||'외부':'외부'):selEl.value):'엑사이스';
-  if(!p){showToast('품목을 선택하세요');return;}
-  if(q<=0){showToast('수량을 입력하세요');return;}
-  C().transfers.unshift({date:d,product:p,fromLoc:fromSrc,toLoc:locId,qty:q,type:'direct',reason:fromSrc+' 직접 입고'});
+  const fromSrc=selEl?(selEl.value==='Custom'?(txtEl?txtEl.value.trim()||'External':'External'):selEl.value):'Excise';
+  if(!p){showToast('Select an item');return;}
+  if(q<=0){showToast('Enter quantity');return;}
+  C().transfers.unshift({date:d,product:p,fromLoc:fromSrc,toLoc:locId,qty:q,type:'direct',reason:fromSrc+' Direct In'});
   window['_savedDate_'+locId+'_direct']=d;
   document.getElementById(locId+'-direct-q').value='';
-  saveState();render();showToast(p+' '+q+'병 직접 입고 ('+fromSrc+')');
+  saveState();render();showToast(p+' '+q+'pcs Direct In ('+fromSrc+')');
 }
 
 function sellStock(locId){
   const p=document.getElementById(locId+'-sell-p').value;
   const d=document.getElementById(locId+'-sell-date').value||today();
   const q=parseInt(document.getElementById(locId+'-sell-q').value)||0;
-  if(!p){showToast('품목을 선택하세요');return;}
-  if(q<=0){showToast('수량을 입력하세요');return;}
+  if(!p){showToast('Select an item');return;}
+  if(q<=0){showToast('Enter quantity');return;}
   const st=getStock(p,locId);
-  if(q>st){showToast('재고 부족 (현재 '+st+'병)');return;}
+  if(q>st){showToast('Out of stock (current '+st+'pcs)');return;}
   C().transfers.unshift({date:d,product:p,fromLoc:locId,toLoc:'판매',qty:q,type:'sell',reason:'판매'});
   window['_savedDate_'+locId+'_sell']=d;
   document.getElementById(locId+'-sell-q').value='';
-  saveState();render();showToast(p+' '+q+'병 판매');
+  saveState();render();showToast(p+' '+q+'pcs Sold');
 }
 
 function etcConsume(locId){
@@ -645,22 +645,22 @@ function etcConsume(locId){
   const q=parseInt(document.getElementById(locId+'-etc-q').value)||0;
   const selEl=document.getElementById(locId+'-etc-reason-sel');
   const txtEl=document.getElementById(locId+'-etc-reason-txt');
-  const reason=selEl.value==='직접 입력'?(txtEl.value.trim()||'기타'):selEl.value;
-  if(!p){showToast('품목을 선택하세요');return;}
-  if(q<=0){showToast('수량을 입력하세요');return;}
+  const reason=selEl.value==='Custom'?(txtEl.value.trim()||'기타'):selEl.value;
+  if(!p){showToast('Select an item');return;}
+  if(q<=0){showToast('Enter quantity');return;}
   const st=getStock(p,locId);
-  if(q>st){showToast('재고 부족 (현재 '+st+'병)');return;}
+  if(q>st){showToast('Out of stock (current '+st+'pcs)');return;}
   if(locId==='c4')C().c4[p].outEtc=(C().c4[p].outEtc||0)+q;
   C().transfers.unshift({date:d,product:p,fromLoc:locId,toLoc:'소진',qty:q,type:'etc',reason});
   window['_savedDate_'+locId+'_etc']=d;
   document.getElementById(locId+'-etc-q').value='';
-  saveState();render();showToast(p+' '+q+'병 소진 ('+reason+')');
+  saveState();render();showToast(p+' '+q+'pcs consumed ('+reason+')');
 }
 
 function setInit(locId){
   const p=document.getElementById(locId+'-init-p').value;
   const q=parseInt(document.getElementById(locId+'-init-q').value)||0;
-  if(!p){showToast('품목을 선택하세요');return;}
+  if(!p){showToast('Select an item');return;}
   if(locId==='c4'){C().c4[p].bought=q;}
   else{
     if(!C().stocks[p])C().stocks[p]={};
@@ -668,7 +668,7 @@ function setInit(locId){
     C().stocks[p][locId].init=q;
   }
   document.getElementById(locId+'-init-q').value='';
-  saveState();render();showToast(p+' 초기 재고 '+q+'병 설정');
+  saveState();render();showToast(p+' 초기 재고 '+q+'pcs set');
 }
 
 function doTransfer(){
@@ -677,22 +677,22 @@ function doTransfer(){
   const to=document.getElementById('tr-to').value;
   const d=document.getElementById('tr-date').value||today();
   const q=parseInt(document.getElementById('tr-q').value)||0;
-  if(!p){showToast('품목을 선택하세요');return;}
-  if(from===to){showToast('출발지와 목적지가 같습니다');return;}
-  if(q<=0){showToast('수량을 입력하세요');return;}
+  if(!p){showToast('Select an item');return;}
+  if(from===to){showToast('Origin and destination are the same');return;}
+  if(q<=0){showToast('Enter quantity');return;}
   const st=getStock(p,from);
-  if(q>st){showToast(locName(from)+' 재고 부족 (현재 '+st+'병)');return;}
+  if(q>st){showToast(locName(from)+' 재고 부족 (현재 '+st+'pcs)');return;}
   // C4에서 나가는 경우 outEtc 대신 transfer로 처리
   C().transfers.unshift({date:d,product:p,fromLoc:from,toLoc:to,qty:q,type:'transfer',reason:null});
   window['_savedDate_transfer']=d;
   document.getElementById('tr-q').value='';
-  saveState();render();showToast(p+' '+q+'병 '+locName(from)+' → '+locName(to));
+  saveState();render();showToast(p+' '+q+'pcs '+locName(from)+' → '+locName(to));
 }
 
 // ── 수정/삭제 ──────────────────────────────────────────
 function openEditModal(idx){
   const t=C().transfers[idx];editTarget={idx,oldQty:t.qty};
-  const typeLabel={buy:'사입 입고',transfer:'이동',direct:'직접 입고',sell:'판매',etc:'기타 소진'}[t.type]||t.type;
+  const typeLabel={buy:'사입 입고',transfer:'이동',direct:'Direct In',sell:'판매',etc:'기타 소진'}[t.type]||t.type;
   document.getElementById('edit-modal-desc').textContent=fmtDate(t.date)+' · '+t.product+' · '+typeLabel;
   document.getElementById('edit-qty-input').value=t.qty;
   openModal('edit');
@@ -714,12 +714,12 @@ function confirmEdit(){
 
 function deleteTransfer(idx){
   const t=C().transfers[idx];
-  const typeLabel={buy:'사입 입고',transfer:'이동',direct:'직접 입고',sell:'판매',etc:'기타 소진'}[t.type]||t.type;
-  if(!confirm(fmtDate(t.date)+' '+t.product+' '+typeLabel+' '+t.qty+'병\n이 내역을 삭제할까요?'))return;
+  const typeLabel={buy:'사입 입고',transfer:'이동',direct:'Direct In',sell:'판매',etc:'기타 소진'}[t.type]||t.type;
+  if(!confirm(fmtDate(t.date)+' '+t.product+' '+typeLabel+' '+t.qty+'pcs\nDelete this record?'))return;
   if(t.type==='buy')C().c4[t.product].bought=Math.max(0,(C().c4[t.product].bought||0)-t.qty);
   if(t.type==='etc'&&t.fromLoc==='c4')C().c4[t.product].outEtc=Math.max(0,(C().c4[t.product].outEtc||0)-t.qty);
   C().transfers.splice(idx,1);
-  saveState();render();showToast('내역 삭제됨');
+  saveState();render();showToast('Record deleted');
 }
 
 // ── 필터 ───────────────────────────────────────────────
@@ -761,7 +761,7 @@ function fillSelect(id,options){
 function fillLocSelect(id, excludeLoc, includeExternal){
   const el=document.getElementById(id);if(!el)return;
   const cur=el.value;el.innerHTML='';
-  if(includeExternal){const o=document.createElement('option');o.value='외부';o.textContent='외부';el.appendChild(o);}
+  if(includeExternal){const o=document.createElement('option');o.value='External';o.textContent='External';el.appendChild(o);}
   const locs=[{id:'c4',name:locName('c4')}].concat(activeVenues().map(v=>({id:v.id,name:v.name})));
   locs.forEach(function(l){
     if(l.id===excludeLoc)return;
@@ -811,7 +811,7 @@ function renderLocTab(locId){
     html+='<div><label>날짜</label><input type="date" id="'+locId+'-sell-date"/></div>';
     html+='<div><label>수량</label><input type="number" id="'+locId+'-sell-q" min="1" placeholder="0"/></div>';
     html+='</div>';
-    html+='<button class="btn btn-primary" style="width:100%" onclick="sellStock(\''+locId+'\')">판매</button>';
+    html+='<button class="btn btn-primary" style="width:100%" onclick="sellStock(\''+locId+'\')">Sell</button>';
     html+='</div>';
   }
 
@@ -825,27 +825,27 @@ function renderLocTab(locId){
     html+='<div><label>날짜</label><input type="date" id="'+locId+'-buy-date"/></div>';
     html+='<div><label>수량</label><input type="number" id="'+locId+'-buy-q" min="1" placeholder="0"/></div>';
     html+='</div>';
-    html+='<button class="btn btn-primary" style="width:100%" onclick="buyStock(\''+locId+'\')">입고</button>';
+    html+='<button class="btn btn-primary" style="width:100%" onclick="buyStock(\''+locId+'\')">Stock In</button>';
     html+='</div>';
   }
 
   // 직접 입고 (업장)
   if(!isC4){
     html+='<div class="card">';
-    html+='<div class="section-title">직접 입고</div>';
+    html+='<div class="section-title">Direct In</div>';
     html+='<div class="section-sub">배달 등으로 업장에 바로 들어오는 경우</div>';
     html+='<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:8px">';
     html+='<div><label>품목</label><select id="'+locId+'-direct-p"></select></div>';
     html+='<div><label>날짜</label><input type="date" id="'+locId+'-direct-date"/></div>';
     html+='<div><label>수량</label><input type="number" id="'+locId+'-direct-q" min="1" placeholder="0"/></div>';
     html+='<div><label>출처</label><select id="'+locId+'-direct-from" onchange="syncDirectFrom(\''+locId+'\')">';
-    html+='<option value="엑사이스">엑사이스</option>';
-    html+='<option value="외부">외부</option>';
-    html+='<option value="직접 입력">직접 입력...</option>';
+    html+='<option value="Excise">Excise</option>';
+    html+='<option value="External">External</option>';
+    html+='<option value="Custom">Custom...</option>';
     html+='</select></div>';
     html+='</div>';
-    html+='<input type="text" id="'+locId+'-direct-from-txt" placeholder="출처 직접 입력" style="display:none;margin-bottom:8px"/>';
-    html+='<button class="btn" style="width:100%" onclick="directIn(\''+locId+'\')">직접 입고</button>';
+    html+='<input type="text" id="'+locId+'-direct-from-txt" placeholder="Enter source" style="display:none;margin-bottom:8px"/>';
+    html+='<button class="btn" style="width:100%" onclick="directIn(\''+locId+'\')">Direct In</button>';
     html+='</div>';
   }
 
@@ -856,7 +856,7 @@ function renderLocTab(locId){
   if(isC4){
     html+='<thead><tr><th style="'+thS+'">품목</th><th style="'+thS+';text-align:right">사입</th><th style="'+thS+';text-align:right">출고</th><th style="'+thS+';text-align:right">기타</th><th style="'+thS+';text-align:right">재고</th><th style="'+thS+'">상태</th></tr></thead>';
   } else {
-    html+='<thead><tr><th style="'+thS+'">품목</th><th style="'+thS+';text-align:right">초기</th><th style="'+thS+';text-align:right">입고</th><th style="'+thS+';text-align:right">판매</th><th style="'+thS+';text-align:right">기타</th><th style="'+thS+';text-align:right">재고</th><th style="'+thS+'">상태</th></tr></thead>';
+    html+='<thead><tr><th style="'+thS+'">품목</th><th style="'+thS+';text-align:right">초기</th><th style="'+thS+';text-align:right">Stock In</th><th style="'+thS+';text-align:right">Sell</th><th style="'+thS+';text-align:right">기타</th><th style="'+thS+';text-align:right">재고</th><th style="'+thS+'">상태</th></tr></thead>';
   }
   html+='<tbody>';
   if(!prods.length){
@@ -898,11 +898,11 @@ function renderLocTab(locId){
   const etcOpts=isC4?['업주 소진','매니저','선물','시음','파손']:['서비스','파손','업주 소진','매니저','시음'];
   html+='<select id="'+locId+'-etc-reason-sel" onchange="syncReason(\''+locId+'-etc\')">';
   etcOpts.forEach(function(o){html+='<option value="'+o+'">'+o+'</option>';});
-  html+='<option value="직접 입력">직접 입력...</option>';
+  html+='<option value="Custom">Custom...</option>';
   html+='</select>';
-  html+='<input type="text" id="'+locId+'-etc-reason-txt" placeholder="사유 직접 입력" style="display:none"/>';
+  html+='<input type="text" id="'+locId+'-etc-reason-txt" placeholder="Enter reason" style="display:none"/>';
   html+='</div></div>';
-  html+='<button class="btn" style="width:100%" onclick="etcConsume(\''+locId+'\')">소진 기록</button>';
+  html+='<button class="btn" style="width:100%" onclick="etcConsume(\''+locId+'\')">Record</button>';
   html+='</div></div>';
 
   // 초기 재고 설정 (접힘, 맨 아래)
@@ -943,13 +943,13 @@ function renderLocTab(locId){
 function downloadDailyExcel(){
   const monthEl=document.getElementById('daily-month');
   const locEl=document.getElementById('daily-loc');
-  if(!monthEl||!monthEl.value){showToast('먼저 조회해주세요');return;}
+  if(!monthEl||!monthEl.value){showToast('Please search first');return;}
 
   const parts=monthEl.value.split('-');
   const year=parseInt(parts[0]),month=parseInt(parts[1]);
   const loc=locEl?locEl.value:'c4';
   const prods=C().products;
-  if(!prods.length){showToast('등록된 품목이 없습니다');return;}
+  if(!prods.length){showToast('No items registered');return;}
 
   const daysInMonth=new Date(year,month,0).getDate();
   function pad2(n){return String(n).padStart(2,'0');}
@@ -1038,7 +1038,7 @@ function downloadDailyExcel(){
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-  showToast('엑셀 파일 다운로드 완료!');
+  showToast('Excel download complete!');
 }
 
 function renderSummary(){
@@ -1178,7 +1178,7 @@ function renderDaily(){
       // C4 또는 다른 업장에서 입고
       var groups={};
       C().transfers.filter(function(t){return t.product===p&&t.toLoc===loc&&(t.type==='transfer'||t.type==='direct')&&t.date===dateStr;}).forEach(function(t){
-        var lbl=t.type==='direct'?(t.reason?t.reason.replace(' 직접 입고',''):locName(t.fromLoc)):locName(t.fromLoc);
+        var lbl=t.type==='direct'?(t.reason?t.reason.replace(' Direct In',''):locName(t.fromLoc)):locName(t.fromLoc);
         groups[lbl]=(groups[lbl]||0)+t.qty;
       });
       Object.keys(groups).forEach(function(lbl){details.push({qty:groups[lbl],label:lbl});});
@@ -1260,10 +1260,10 @@ function renderTransfer(){
     else if(!el.value) el.value=today();
     el.onchange=function(){window['_savedDate_transfer']=el.value;};
   }
-  const typeTag={buy:'<span class="tag tag-buy">사입 입고</span>',transfer:'<span class="tag tag-transfer">이동</span>',direct:'<span class="tag tag-direct">직접 입고</span>',sell:'<span class="tag tag-sell">판매</span>',etc:'<span class="tag tag-etc">기타 소진</span>'};
+  const typeTag={buy:'<span class="tag tag-buy">사입 입고</span>',transfer:'<span class="tag tag-transfer">Move</span>',direct:'<span class="tag tag-direct">Direct In</span>',sell:'<span class="tag tag-sell">Sell</span>',etc:'<span class="tag tag-etc">기타 소진</span>'};
   document.getElementById('tr-table').innerHTML=C().transfers.length
     ?C().transfers.map(function(t,i){
-      const from=t.fromLoc==='외부'?'외부':locName(t.fromLoc)||t.fromLoc;
+      const from=t.fromLoc==='External'?'External':locName(t.fromLoc)||t.fromLoc;
       const to=t.toLoc==='판매'?'판매':t.toLoc==='소진'?'소진':locName(t.toLoc)||t.toLoc;
       return '<tr><td style="color:#aaa;white-space:nowrap">'+fmtDate(t.date)+'</td><td>'+t.product+'</td><td>'+from+'</td><td>'+to+'</td><td style="text-align:right">'+t.qty+'병</td><td>'+(typeTag[t.type]||t.type)+'</td><td style="color:#888">'+(t.reason||'-')+'</td><td style="white-space:nowrap"><button class="btn btn-sm" onclick="openEditModal('+i+')" style="margin-right:4px">수정</button><button class="btn btn-sm btn-danger" onclick="deleteTransfer('+i+')">삭제</button></td></tr>';
     }).join('')
@@ -1285,7 +1285,7 @@ function renderSettings(){
     }).join('')||'<div style="font-size:13px;color:#aaa;padding:10px 0">등록된 업장이 없습니다</div>';
   }
   // 품목 목록
-  const cat=currentCat==='whiskey'?'위스키':'비어';
+  const cat=currentCat==='whiskey'?'Whiskey':'Beer';
   const ptitle=document.getElementById('settings-product-title');
   if(ptitle)ptitle.textContent=cat+' 품목 이름 변경 · 삭제';
   const pl=document.getElementById('product-list');
@@ -1310,13 +1310,13 @@ function syncReason(prefix){
   const sel=document.getElementById(prefix+'-reason-sel');
   const txt=document.getElementById(prefix+'-reason-txt');
   if(!sel||!txt)return;
-  txt.style.display=sel.value==='직접 입력'?'':'none';
-  if(sel.value==='직접 입력')txt.focus();
+  txt.style.display=sel.value==='Custom'?'':'none';
+  if(sel.value==='Custom')txt.focus();
 }
 
 // ── 전체 렌더 ──────────────────────────────────────────
 function render(){
-  const catLabel=currentCat==='whiskey'?'🥃 위스키':'🍺 비어';
+  const catLabel=currentCat==='whiskey'?'🥃 Whiskey':'🍺 Beer';
   const sub=document.getElementById('header-sub');
   if(sub){
     let locs=locName('c4');
