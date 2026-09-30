@@ -157,7 +157,7 @@ tr:hover td{background:#fafaf8}
     <div id="filter-active-note" class="filter-note"></div>
   </div>
   <div class="card">
-    <div class="section-title">품목별 현황</div>
+    <div class="section-title">Stock Overview</div>
     <div class="table-wrap" style="overflow:auto"><table style="table-layout:fixed;width:100%">
       <thead id="summary-head"></thead>
       <tbody id="summary-table"><tr><td colspan="6" class="msg">등록된 품목이 없습니다</td></tr></tbody>
@@ -1068,10 +1068,24 @@ function renderSummary(){
     hh+='<col style="width:90px">';
     activeVenues().forEach(function(){hh+='<col style="width:90px">';});
     hh+='</colgroup>';
-    hh+='<tr><th style="'+thFirstStyle+'">Item</th><th style="'+thStyle+';text-align:right">Buying</th><th style="'+thStyle+';text-align:right">'+locName('c4')+' Stock</th>';
-    activeVenues().forEach(function(v){hh+='<th style="'+thStyle+';text-align:right">'+v.name+' Stock</th>';});
+    // 날짜 레이블 생성
+    var dateLabel='';
+    if(!from&&!to) dateLabel='';
+    else if(from===to) dateLabel=' ('+from.slice(5).replace('-','/')+')';
+    else if(from&&to) dateLabel=' ('+from.slice(5).replace('-','/')+'-'+to.slice(5).replace('-','/')+')';
+    else if(from) dateLabel=' ('+from.slice(5).replace('-','/')+'+)';
+    else if(to) dateLabel=' (~'+to.slice(5).replace('-','/')+')';
+
+    hh+='<tr><th style="'+thFirstStyle+'">Item</th><th style="'+thStyle+';text-align:right">Buying</th><th style="'+thStyle+';text-align:right">'+locName('c4')+'</th>';
+    activeVenues().forEach(function(v){hh+='<th style="'+thStyle+';text-align:right">'+v.name+'</th>';});
     hh+='<th style="'+thStyle+';text-align:right">ETC</th>';
-    activeVenues().forEach(function(v){hh+='<th style="'+thStyle+';text-align:right">'+v.name+' Sales</th>';});
+    activeVenues().forEach(function(v){
+      if(dateLabel){
+        hh+='<th style="'+thStyle+';text-align:right;line-height:1.3">'+v.name+'<br><span style="font-size:10px;color:#aaa;font-weight:400">'+dateLabel.replace(/[()]/g,'').trim()+'</span></th>';
+      } else {
+        hh+='<th style="'+thStyle+';text-align:right">'+v.name+'</th>';
+      }
+    });
     hh+='</tr>';
     head.innerHTML=hh;
   }
