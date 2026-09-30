@@ -174,7 +174,7 @@ tr:hover td{background:#fafaf8}
         <label style="font-size:13px;color:#666">Month</label>
         <input type="month" id="daily-month" style="width:160px;padding:8px 10px;font-size:14px;border:1px solid #d0d0c8;border-radius:8px"/>
       </div>
-      <div style="display:flex;flex-direction:column;gap:4px">
+      <div id="daily-loc-wrap" style="display:flex;flex-direction:column;gap:4px">
         <label style="font-size:13px;color:#666">Venue</label>
         <select id="daily-loc" style="width:160px;padding:8px 10px;font-size:14px;border:1px solid #d0d0c8;border-radius:8px" onchange="renderDaily()"></select>
       </div>
@@ -1137,28 +1137,124 @@ function renderSummary(){
 
 // ── 일별 현황 ──────────────────────────────────────────
 function initDailyLocSelect(){
-  const el=document.getElementById('daily-loc');if(!el)return;
-  const cur=el.value;el.innerHTML='';
-  const locs=[{id:'c4',name:locName('c4')}].concat(activeVenues().map(v=>({id:v.id,name:v.name})));
-  locs.forEach(function(l){
-    const o=document.createElement('option');o.value=l.id;o.textContent=l.name;
-    if(l.id===cur)o.selected=true;
-    el.appendChild(o);
-  });
+  const wrap=document.getElementById('daily-loc-wrap');
+  const el=document.getElementById('daily-loc');
+  // 비어는 Venue 선택 숨기고 전체 업장을 한번에 표시
+  if(currentCat==='beer'){
+    if(wrap)wrap.style.display='none';
+  } else {
+    if(wrap)wrap.style.display='flex';
+    if(el){
+      const cur=el.value;el.innerHTML='';
+      const locs=[{id:'c4',name:locName('c4')}].concat(activeVenues().map(v=>({id:v.id,name:v.name})));
+      locs.forEach(function(l){
+        const o=document.createElement('option');o.value=l.id;o.textContent=l.name;
+        if(l.id===cur)o.selected=true;
+        el.appendChild(o);
+      });
+    }
+  }
   const dm=document.getElementById('daily-month');
   if(dm&&!dm.value){const n=new Date();dm.value=n.getFullYear()+'-'+pad(n.getMonth()+1);}
+}
+
+function renderDailyBeer(year,month,prods,wrap){
+  const venues=activeVenues();
+  if(!venues.length){wrap.innerHTML='<div class="msg">No active venues</div>';return;}
+  const daysInMonth=new Date(year,month,0).getDate();
+  function ds(d){return year+'-'+pad(month)+'-'+pad(d);}
+
+  function stockOnDayLoc(p,locId,d){
+    const dateStr=ds(d);
+    const init=(C().stocks[p]&&C().stocks[p][locId])?C().stocks[p][locId].init||0:0;
+    const inQty=C().transfers.filter(t=>t.product===p&&t.toLoc===locId&&(t.type==='transfer'||t.type==='direct')&&t.date<=dateStr).reduce((a,t)=>a+t.qty,0);
+    const outQty=C().transfers.filter(t=>t.product===p&&t.fromLoc===locId&&t.type==='transfer'&&t.date<=dateStr).reduce((a,t)=>a+t.qty,0);
+    const sold=C().transfers.filter(t=>t.product===p&&t.fromLoc===locId&&t.type==='sell'&&t.date<=dateStr).reduce((a,t)=>a+t.qty,0);
+    const etc=C().transfers.filter(t=>t.product===p&&t.fromLoc===locId&&t.type==='etc'&&t.date<=dateStr).reduce((a,t)=>a+t.qty,0);
+    return init+inQty-outQty-sold-etc;
+  }
+
+  function inDetailsLoc(p,locId,d){
+    const dateStr=ds(d);
+    var groups={};
+    C().transfers.filter(function(t){return t.product===p&&t.toLoc===locId&&(t.type==='transfer'||t.type==='direct')&&t.date===dateStr;}).forEach(function(t){
+      var rawSrc=t.type==='direct'?(t.reason?t.reason.replace(' Direct In','').replace(' 직접 입고','').trim():t.fromLoc):t.fromLoc;
+      var srcMap={'엑사이스':'EXCISE','Excise':'EXCISE','외부':'DIRECT','External':'DIRECT'};
+      var lbl=srcMap[rawSrc]||rawSrc;
+      groups[lbl]=(groups[lbl]||0)+t.qty;
+    });
+    return Object.keys(groups).map(function(lbl){return{qty:groups[lbl],label:lbl};});
+  }
+
+  function outDetailsLoc(p,locId,d){
+    const dateStr=ds(d);
+    var details=[];
+    var sq=C().transfers.filter(function(t){return t.product===p&&t.fromLoc===locId&&t.type==='sell'&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
+    if(sq>0)details.push({qty:sq,label:'Sold'});
+    var eq=C().transfers.filter(function(t){return t.product===p&&t.fromLoc===locId&&t.type==='etc'&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
+    if(eq>0)details.push({qty:eq,label:'Etc'});
+    return details;
+  }
+
+  function cellBg(s){if(s<=0)return'#fff5f5';if(s<=3)return'#fffbf0';return'#f0faf4';}
+  function cellHtml(p,locId,d){
+    var stock=stockOnDayLoc(p,locId,d);
+    var inD=inDetailsLoc(p,locId,d);
+    var outD=outDetailsLoc(p,locId,d);
+    var bg=cellBg(stock);
+    var h='<td style="text-align:center;padding:5px 4px;border-bottom:1px solid #f0f0e8;border-right:1px solid #f0f0e8;background:'+bg+';min-width:72px;vertical-align:top">';
+    h+='<div style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:2px">'+stock+'</div>';
+    inD.forEach(function(d2){h+='<div style="font-size:10px;color:#1a5ccf;white-space:nowrap">+'+d2.qty+' <span style="color:#888">'+d2.label+'</span></div>';});
+    outD.forEach(function(d2){h+='<div style="font-size:10px;color:#c0392b;white-space:nowrap">-'+d2.qty+' <span style="color:#888">'+d2.label+'</span></div>';});
+    h+='</td>';
+    return h;
+  }
+
+  const thStyle='position:sticky;top:0;background:#f5f5f3;z-index:2;padding:7px 6px;border-bottom:1px solid #e8e8e0;border-right:1px solid #f0f0e8;text-align:center;white-space:nowrap;font-size:11px;min-width:72px';
+  const thFirst='position:sticky;left:0;top:0;background:#f5f5f3;padding:8px 10px;border-bottom:1px solid #e8e8e0;border-right:1px solid #e0e0d8;white-space:nowrap;z-index:3;font-size:12px;color:#888';
+
+  var html='<table style="font-size:12px;border-collapse:collapse;min-width:100%"><thead><tr>';
+  html+='<th style="'+thFirst+'">Date</th>';
+  prods.forEach(function(p){
+    venues.forEach(function(v){
+      html+='<th style="'+thStyle+'">'+p+'<br><span style="color:#aaa;font-weight:400">'+v.name+'</span></th>';
+    });
+  });
+  html+='</tr></thead><tbody>';
+
+  const td=today();
+  for(var d=1;d<=daysInMonth;d++){
+    var dateStr2=ds(d);
+    var isToday=dateStr2===td;
+    html+='<tr style="'+(isToday?'background:#f0f4ff':'')+'"><td style="position:sticky;left:0;padding:8px 10px;border-bottom:1px solid #f0f0e8;border-right:1px solid #e0e0d8;white-space:nowrap;font-weight:'+(isToday?'600':'400')+';color:'+(isToday?'#1a5ccf':'#666')+';background:'+(isToday?'#e8eeff':'#fafaf8')+'">'+month+'/'+d+(isToday?' ●':'')+'</td>';
+    prods.forEach(function(p){
+      venues.forEach(function(v){
+        html+=cellHtml(p,v.id,d);
+      });
+    });
+    html+='</tr>';
+  }
+  html+='</tbody></table>';
+  wrap.innerHTML=html;
 }
 
 function renderDaily(){
   const monthEl=document.getElementById('daily-month');
   const locEl=document.getElementById('daily-loc');
   const wrap=document.getElementById('daily-table-wrap');
-  if(!monthEl||!monthEl.value){if(wrap)wrap.innerHTML='<div class="msg">월을 선택하고 조회 버튼을 눌러주세요</div>';return;}
+  if(!monthEl||!monthEl.value){if(wrap)wrap.innerHTML='<div class="msg">Select a month and click View</div>';return;}
   const parts=monthEl.value.split('-');
   const year=parseInt(parts[0]),month=parseInt(parts[1]);
-  const loc=locEl?locEl.value:'c4';
   const prods=visibleProducts();
-  if(!prods.length){wrap.innerHTML='<div class="msg">등록된 품목이 없습니다</div>';return;}
+  if(!prods.length){wrap.innerHTML='<div class="msg">No items registered</div>';return;}
+
+  // 비어: 전체 업장을 한 화면에 표시
+  if(currentCat==='beer'){
+    renderDailyBeer(year,month,prods,wrap);
+    return;
+  }
+
+  const loc=locEl?locEl.value:'c4';
   const daysInMonth=new Date(year,month,0).getDate();
   function ds(d){return year+'-'+pad(month)+'-'+pad(d);}
   function stockOnDay(p,d){
