@@ -1178,7 +1178,9 @@ function renderDaily(){
       // C4 또는 다른 업장에서 입고
       var groups={};
       C().transfers.filter(function(t){return t.product===p&&t.toLoc===loc&&(t.type==='transfer'||t.type==='direct')&&t.date===dateStr;}).forEach(function(t){
-        var lbl=t.type==='direct'?(t.reason?t.reason.replace(' Direct In',''):locName(t.fromLoc)):locName(t.fromLoc);
+        var rawSrc=t.type==='direct'?(t.reason?t.reason.replace(' Direct In','').replace(' 직접 입고','').trim():t.fromLoc):t.fromLoc;
+        var srcMap={'엑사이스':'EXCISE','Excise':'EXCISE','외부':'DIRECT','External':'DIRECT'};
+        var lbl=srcMap[rawSrc]||rawSrc;
         groups[lbl]=(groups[lbl]||0)+t.qty;
       });
       Object.keys(groups).forEach(function(lbl){details.push({qty:groups[lbl],label:lbl});});
