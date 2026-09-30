@@ -1065,10 +1065,14 @@ function renderSummary(){
     const thFirstStyle=thStyle+';left:0;z-index:3;width:120px;min-width:120px';
     let hh='<colgroup><col style="width:120px;min-width:120px"><col style="width:90px"><col style="width:90px">';
     activeVenues().forEach(function(){hh+='<col style="width:90px">';});
-    hh+='<col style="width:90px"><col style="width:90px"></colgroup>';
-    hh+='<tr><th style="'+thFirstStyle+'">품목</th><th style="'+thStyle+';text-align:right">사입</th><th style="'+thStyle+';text-align:right">C4 재고</th>';
-    activeVenues().forEach(function(v){hh+='<th style="'+thStyle+';text-align:right">'+v.name+' 재고</th>';});
-    hh+='<th style="'+thStyle+';text-align:right">기타 소진</th><th style="'+thStyle+';text-align:right">판매</th></tr>';
+    hh+='<col style="width:90px">';
+    activeVenues().forEach(function(){hh+='<col style="width:90px">';});
+    hh+='</colgroup>';
+    hh+='<tr><th style="'+thFirstStyle+'">Item</th><th style="'+thStyle+';text-align:right">Buying</th><th style="'+thStyle+';text-align:right">'+locName('c4')+' Stock</th>';
+    activeVenues().forEach(function(v){hh+='<th style="'+thStyle+';text-align:right">'+v.name+' Stock</th>';});
+    hh+='<th style="'+thStyle+';text-align:right">ETC</th>';
+    activeVenues().forEach(function(v){hh+='<th style="'+thStyle+';text-align:right">'+v.name+' Sales</th>';});
+    hh+='</tr>';
     head.innerHTML=hh;
   }
   if(!prods.length){
@@ -1078,24 +1082,26 @@ function renderSummary(){
   const filtered=C().transfers.filter(t=>inRange(t.date,from,to));
   const rows=prods.map(function(p){
     const bought=filtered.filter(t=>t.product===p&&t.type==='buy').reduce((a,t)=>a+t.qty,0);
-    const sold=filtered.filter(t=>t.product===p&&t.type==='sell').reduce((a,t)=>a+t.qty,0);
-    const etc=filtered.filter(t=>t.product===p&&(t.type==='etc')).reduce((a,t)=>a+t.qty,0);
+    const etc=filtered.filter(t=>t.product===p&&t.type==='etc').reduce((a,t)=>a+t.qty,0);
     const c4s=getC4Stock(p);
     const locStocks=activeVenues().map(v=>getLocStock(p,v.id));
-    return{p,bought,sold,etc,c4s,locStocks};
+    const locSales=activeVenues().map(v=>filtered.filter(t=>t.product===p&&t.type==='sell'&&t.fromLoc===v.id).reduce((a,t)=>a+t.qty,0));
+    return{p,bought,etc,c4s,locStocks,locSales};
   });
   const tBought=rows.reduce((a,r)=>a+r.bought,0);
-  const tSold=rows.reduce((a,r)=>a+r.sold,0);
   const tEtc=rows.reduce((a,r)=>a+r.etc,0);
   const tC4s=rows.reduce((a,r)=>a+r.c4s,0);
   const tLoc=activeVenues().map((_,i)=>rows.reduce((a,r)=>a+r.locStocks[i],0));
+  const tLocSales=activeVenues().map((_,i)=>rows.reduce((a,r)=>a+r.locSales[i],0));
   const stickyTd='position:sticky;left:0;background:#fff;z-index:1;padding:9px 10px;border-bottom:1px solid #f0f0e8;width:120px';
   const numTd='text-align:right;padding:9px 10px;border-bottom:1px solid #f0f0e8;width:90px';
+  const salesTd='text-align:right;padding:9px 10px;border-bottom:1px solid #f0f0e8;width:90px;font-weight:600';
   let html=rows.map(function(r){
     let tr='<tr><td style="'+stickyTd+'"><b>'+r.p+'</b></td><td style="'+numTd+'">'+r.bought+'</td><td style="'+numTd+'">'+r.c4s+'</td>';
     r.locStocks.forEach(function(s){tr+='<td style="'+numTd+'">'+s+'</td>';});
     tr+='<td style="'+numTd+'">'+r.etc+'</td>';
-    tr+='<td style="'+numTd+';font-weight:600;color:'+(r.sold>0?'#c0392b':'#aaa')+'">'+r.sold+'</td></tr>';
+    r.locSales.forEach(function(s){tr+='<td style="'+salesTd+';color:'+(s>0?'#c0392b':'#aaa')+'">'+s+'</td>';});
+    tr+='</tr>';
     return tr;
   }).join('');
   html+='<tr style="border-top:2px solid #d0d0c8;background:#f5f5f3;font-weight:600">';
@@ -1103,7 +1109,8 @@ function renderSummary(){
   html+='<td style="'+numTd+'">'+tBought+'</td><td style="'+numTd+'">'+tC4s+'</td>';
   tLoc.forEach(function(s){html+='<td style="'+numTd+'">'+s+'</td>';});
   html+='<td style="'+numTd+'">'+tEtc+'</td>';
-  html+='<td style="'+numTd+';color:'+(tSold>0?'#c0392b':'#aaa')+'">'+tSold+'</td></tr>';
+  tLocSales.forEach(function(s){html+='<td style="'+salesTd+';color:'+(s>0?'#c0392b':'#aaa')+'">'+s+'</td>';});
+  html+='</tr>';
   document.getElementById('summary-table').innerHTML=html;
 }
 
