@@ -631,7 +631,7 @@ function directIn(locId){
   const q=parseInt(document.getElementById(locId+'-direct-q').value)||0;
   const selEl=document.getElementById(locId+'-direct-from');
   const txtEl=document.getElementById(locId+'-direct-from-txt');
-  const fromSrc=selEl?(selEl.value==='Custom'?(txtEl?txtEl.value.trim()||'External':'External'):selEl.value):'Excise';
+  const fromSrc=selEl?(selEl.value==='Custom'?(txtEl?txtEl.value.trim()||'External':'External'):selEl.value):'External';
   if(!p){showToast('Select an item');return;}
   if(q<=0){showToast('Enter quantity');return;}
   C().transfers.unshift({date:d,product:p,fromLoc:fromSrc,toLoc:locId,qty:q,type:'direct',reason:fromSrc+' Direct In'});
@@ -854,8 +854,8 @@ function renderLocTab(locId){
     html+='<div><label>날짜</label><input type="date" id="'+locId+'-direct-date"/></div>';
     html+='<div><label>수량</label><input type="number" id="'+locId+'-direct-q" min="1" placeholder="0"/></div>';
     html+='<div><label>출처</label><select id="'+locId+'-direct-from" onchange="syncDirectFrom(\''+locId+'\')">';
-    html+='<option value="Excise">Excise</option>';
     html+='<option value="External">External</option>';
+    html+='<option value="Excise">Excise</option>';
     html+='<option value="Custom">Custom...</option>';
     html+='</select></div>';
     html+='</div>';
