@@ -1191,8 +1191,13 @@ function renderDailyBeer(year,month,prods,wrap){
     var details=[];
     var sq=C().transfers.filter(function(t){return t.product===p&&t.fromLoc===locId&&t.type==='sell'&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
     if(sq>0)details.push({qty:sq,label:'Sold'});
-    var eq=C().transfers.filter(function(t){return t.product===p&&t.fromLoc===locId&&t.type==='etc'&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
-    if(eq>0)details.push({qty:eq,label:'Etc'});
+    var etcMap2={'서비스':'Service','파손':'Break','업주 소진':'Owner','매니저':'Manager','시음':'Tasting'};
+    var etcGroups2={};
+    C().transfers.filter(function(t){return t.product===p&&t.fromLoc===locId&&t.type==='etc'&&t.date===dateStr;}).forEach(function(t){
+      var lbl=etcMap2[t.reason||'']||t.reason||'Etc';
+      etcGroups2[lbl]=(etcGroups2[lbl]||0)+t.qty;
+    });
+    Object.keys(etcGroups2).forEach(function(lbl){details.push({qty:etcGroups2[lbl],label:lbl});});
     return details;
   }
 
@@ -1312,8 +1317,13 @@ function renderDaily(){
       });
       Object.keys(groups).forEach(function(lbl){details.push({qty:groups[lbl],label:lbl});});
       // 기타 소진
-      var eq=C().transfers.filter(function(t){return t.product===p&&t.fromLoc==='c4'&&t.type==='etc'&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
-      if(eq>0)details.push({qty:eq,label:'Etc'});
+      var etcMapC4={'서비스':'Service','파손':'Break','업주 소진':'Owner','매니저':'Manager','시음':'Tasting'};
+      var etcGrpC4={};
+      C().transfers.filter(function(t){return t.product===p&&t.fromLoc==='c4'&&t.type==='etc'&&t.date===dateStr;}).forEach(function(t){
+        var lbl=etcMapC4[t.reason||'']||t.reason||'Etc';
+        etcGrpC4[lbl]=(etcGrpC4[lbl]||0)+t.qty;
+      });
+      Object.keys(etcGrpC4).forEach(function(lbl){details.push({qty:etcGrpC4[lbl],label:lbl});});
     } else {
       var sq=C().transfers.filter(function(t){return t.product===p&&t.fromLoc===loc&&t.type==='sell'&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
       if(sq>0)details.push({qty:sq,label:'Sold'});
@@ -1325,8 +1335,13 @@ function renderDaily(){
       });
       Object.keys(groups2).forEach(function(lbl){details.push({qty:groups2[lbl],label:lbl});});
       // 기타 소진
-      var eq2=C().transfers.filter(function(t){return t.product===p&&t.fromLoc===loc&&t.type==='etc'&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
-      if(eq2>0)details.push({qty:eq2,label:'Etc'});
+      var etcMapLoc={'서비스':'Service','파손':'Break','업주 소진':'Owner','매니저':'Manager','시음':'Tasting'};
+      var etcGrpLoc={};
+      C().transfers.filter(function(t){return t.product===p&&t.fromLoc===loc&&t.type==='etc'&&t.date===dateStr;}).forEach(function(t){
+        var lbl=etcMapLoc[t.reason||'']||t.reason||'Etc';
+        etcGrpLoc[lbl]=(etcGrpLoc[lbl]||0)+t.qty;
+      });
+      Object.keys(etcGrpLoc).forEach(function(lbl){details.push({qty:etcGrpLoc[lbl],label:lbl});});
     }
     return details;
   }
