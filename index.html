@@ -1178,7 +1178,7 @@ function renderDailyBeer(year,month,prods,wrap){
     const dateStr=ds(d);
     var groups={};
     C().transfers.filter(function(t){return t.product===p&&t.toLoc===locId&&(t.type==='transfer'||t.type==='direct')&&t.date===dateStr;}).forEach(function(t){
-      var rawSrc=t.type==='direct'?(t.reason?t.reason.replace(' Direct In','').replace(' 직접 입고','').trim():t.fromLoc):t.fromLoc;
+      var rawSrc=t.type==='direct'?(t.reason?t.reason.replace(' Direct In','').replace(' 직접 입고','').trim():t.fromLoc):locName(t.fromLoc);
       var srcMap={'엑사이스':'EXCISE','Excise':'EXCISE','외부':'DIRECT','External':'DIRECT'};
       var lbl=srcMap[rawSrc]||rawSrc;
       groups[lbl]=(groups[lbl]||0)+t.qty;
@@ -1191,6 +1191,13 @@ function renderDailyBeer(year,month,prods,wrap){
     var details=[];
     var sq=C().transfers.filter(function(t){return t.product===p&&t.fromLoc===locId&&t.type==='sell'&&t.date===dateStr;}).reduce(function(a,t){return a+t.qty;},0);
     if(sq>0)details.push({qty:sq,label:'Sold'});
+    // 다른 업장으로 이동 출고
+    var tGroups={};
+    C().transfers.filter(function(t){return t.product===p&&t.fromLoc===locId&&t.type==='transfer'&&t.date===dateStr;}).forEach(function(t){
+      var lbl='→'+locName(t.toLoc);
+      tGroups[lbl]=(tGroups[lbl]||0)+t.qty;
+    });
+    Object.keys(tGroups).forEach(function(lbl){details.push({qty:tGroups[lbl],label:lbl});});
     var etcMap2={'서비스':'Service','파손':'Break','업주 소진':'Owner','매니저':'Manager','시음':'Tasting'};
     var etcGroups2={};
     C().transfers.filter(function(t){return t.product===p&&t.fromLoc===locId&&t.type==='etc'&&t.date===dateStr;}).forEach(function(t){
@@ -1294,7 +1301,7 @@ function renderDaily(){
       // C4 또는 다른 업장에서 입고
       var groups={};
       C().transfers.filter(function(t){return t.product===p&&t.toLoc===loc&&(t.type==='transfer'||t.type==='direct')&&t.date===dateStr;}).forEach(function(t){
-        var rawSrc=t.type==='direct'?(t.reason?t.reason.replace(' Direct In','').replace(' 직접 입고','').trim():t.fromLoc):t.fromLoc;
+        var rawSrc=t.type==='direct'?(t.reason?t.reason.replace(' Direct In','').replace(' 직접 입고','').trim():t.fromLoc):locName(t.fromLoc);
         var srcMap={'엑사이스':'EXCISE','Excise':'EXCISE','외부':'DIRECT','External':'DIRECT'};
         var lbl=srcMap[rawSrc]||rawSrc;
         groups[lbl]=(groups[lbl]||0)+t.qty;
