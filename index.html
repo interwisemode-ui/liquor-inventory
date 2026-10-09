@@ -1208,9 +1208,10 @@ function renderDailyBeer(year,month,prods,wrap){
     var outD=outDetailsLoc(p,locId,d);
     var bg=cellBg(stock);
     var h='<td style="text-align:center;padding:5px 4px;border-bottom:1px solid #f0f0e8;border-right:1px solid #f0f0e8;background:'+bg+';min-width:72px;vertical-align:top">';
-    h+='<div style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:2px">'+stock+'</div>';
     inD.forEach(function(d2){h+='<div style="font-size:10px;color:#1a5ccf;white-space:nowrap">+'+d2.qty+' <span style="color:#888">'+d2.label+'</span></div>';});
     outD.forEach(function(d2){h+='<div style="font-size:10px;color:#c0392b;white-space:nowrap">-'+d2.qty+' <span style="color:#888">'+d2.label+'</span></div>';});
+    if(inD.length||outD.length)h+='<div style="border-top:1px solid #ddd;margin:3px 0"></div>';
+    h+='<div style="font-size:13px;font-weight:600;color:#1a1a1a">'+stock+'</div>';
     h+='</td>';
     return h;
   }
@@ -1361,13 +1362,14 @@ function renderDaily(){
       var outDetails=outDetailsOnDay(p,d);
       var bg=cellBg(stock);
       html+='<td style="text-align:center;padding:5px 4px;border-bottom:1px solid #f0f0e8;border-right:1px solid #f0f0e8;background:'+bg+';min-width:72px;vertical-align:top">';
-      html+='<div style="font-size:13px;font-weight:600;color:#1a1a1a;margin-bottom:2px">'+stock+'</div>';
       inDetails.forEach(function(d2){
         html+='<div style="font-size:10px;color:#1a5ccf;white-space:nowrap">+'+d2.qty+' <span style="color:#888">'+d2.label+'</span></div>';
       });
       outDetails.forEach(function(d2){
         html+='<div style="font-size:10px;color:#c0392b;white-space:nowrap">-'+d2.qty+' <span style="color:#888">'+d2.label+'</span></div>';
       });
+      if(inDetails.length||outDetails.length)html+='<div style="border-top:1px solid #ddd;margin:3px 0"></div>';
+      html+='<div style="font-size:13px;font-weight:600;color:#1a1a1a">'+stock+'</div>';
       html+='</td>';
     });
     html+='</tr>';
