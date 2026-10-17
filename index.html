@@ -1426,13 +1426,51 @@ function renderSettings(){
   const pl=document.getElementById('product-list');
   if(pl){
     const hidden=C().hidden||[];
-    pl.innerHTML=C().products.length
-      ?C().products.map(function(p,i){
+    if(!C().products.length){
+      pl.innerHTML='<div style="font-size:13px;color:#aaa;padding:12px 0">등록된 품목이 없습니다</div>';
+    } else {
+      pl.innerHTML=C().products.map(function(p,i){
         const isHidden=hidden.includes(p);
         const hideBtn='<button class="btn btn-sm" style="'+(isHidden?'color:#888;border-color:#d0d0c8':'color:#1a7a3c;border-color:#a8dfc0')+'" onclick="toggleHideProduct('+i+')">'+(isHidden?'○ Hidden':'✓ Visible')+'</button>';
-        return '<div class="product-row" style="opacity:'+(isHidden?'0.5':'1')+'"><input type="text" id="ri-'+i+'" value="'+p+'" style="flex:1;max-width:180px"/><button class="btn btn-sm" onclick="renameProduct('+i+')">Rename</button>'+hideBtn+'<button class="btn btn-sm btn-danger" onclick="deleteProduct('+i+')">Delete</button></div>';
-      }).join('')
-      :'<div style="font-size:13px;color:#aaa;padding:12px 0">등록된 품목이 없습니다</div>';
+        return '<div class="product-row" draggable="true" data-idx="'+i+'" style="opacity:'+(isHidden?'0.5':'1')+';cursor:grab">'
+          +'<span style="color:#bbb;font-size:16px;padding:0 6px 0 2px;cursor:grab;user-select:none">⠿</span>'
+          +'<input type="text" id="ri-'+i+'" value="'+p+'" style="flex:1;max-width:180px"/>'
+          +'<button class="btn btn-sm" onclick="renameProduct('+i+')">Rename</button>'
+          +hideBtn
+          +'<button class="btn btn-sm btn-danger" onclick="deleteProduct('+i+')">Delete</button>'
+          +'</div>';
+      }).join('');
+      // 드래그 앤 드롭 이벤트
+      var dragSrc=null;
+      pl.querySelectorAll('.product-row').forEach(function(row){
+        row.addEventListener('dragstart',function(e){
+          dragSrc=this;
+          this.style.opacity='0.4';
+          e.dataTransfer.effectAllowed='move';
+        });
+        row.addEventListener('dragend',function(){
+          this.style.opacity='';
+          pl.querySelectorAll('.product-row').forEach(function(r){r.style.background='';});
+        });
+        row.addEventListener('dragover',function(e){
+          e.preventDefault();
+          e.dataTransfer.dropEffect='move';
+          pl.querySelectorAll('.product-row').forEach(function(r){r.style.background='';});
+          if(this!==dragSrc)this.style.background='#e8f0fd';
+        });
+        row.addEventListener('drop',function(e){
+          e.preventDefault();
+          if(!dragSrc||dragSrc===this)return;
+          var fromIdx=parseInt(dragSrc.dataset.idx);
+          var toIdx=parseInt(this.dataset.idx);
+          // products 배열 순서 변경
+          var prods=C().products;
+          var item=prods.splice(fromIdx,1)[0];
+          prods.splice(toIdx,0,item);
+          save();render();renderSettings();
+        });
+      });
+    }
   }
 }
 
