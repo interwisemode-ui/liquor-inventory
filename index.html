@@ -272,8 +272,8 @@ const STORE_KEY='wsk_v9';
 let S = {
   locNames: {c4:'C4 창고'},   // c4 + 업장들
   venues: [],                  // [{id,name}] 업장 목록 (c4 제외)
-  whiskey: { products:[], c4:{}, stocks:{}, transfers:[] },
-  beer:    { products:[], c4:{}, stocks:{}, transfers:[] }
+  whiskey: { products:[], c4:{}, stocks:{}, transfers:[], notes:{} },
+  beer:    { products:[], c4:{}, stocks:{}, transfers:[], notes:{} }
 };
 let currentCat = 'whiskey';
 let sumFilter = {mode:'yesterday', from:null, to:null};
@@ -284,6 +284,7 @@ function activeVenues(){ return S.venues.filter(function(v){return v.active!==fa
 function allLocs(){ return ['c4'].concat(S.venues.map(v=>v.id)); }
 function activeLocs(){ return ['c4'].concat(activeVenues().map(v=>v.id)); }
 function locName(id){ return S.locNames[id]||id; }
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 
 // ── 날짜 유틸 ──────────────────────────────────────────
 function today(){const n=new Date();return n.getFullYear()+'-'+pad(n.getMonth()+1)+'-'+pad(n.getDate());}
@@ -346,6 +347,7 @@ function migrateNew(o){
     S[cat].c4=src.c4||{};
     S[cat].stocks=src.stocks||{};
     S[cat].transfers=src.transfers||[];
+    S[cat].notes=src.notes||{};
     S[cat].products.forEach(function(p){
       if(!S[cat].stocks[p])S[cat].stocks[p]={};
       S.venues.forEach(function(v){
@@ -1119,7 +1121,19 @@ function renderSummary(){
   const salesTd='text-align:right;padding:9px 10px;border-bottom:1px solid #f0f0e8;width:90px;font-weight:600';
   let html=rows.map(function(r){
     let tr='<tr><td style="'+stickyTd+'"><b>'+r.p+'</b></td><td style="'+numTd+'">'+r.bought+'</td><td style="'+numTd+'">'+r.c4s+'</td>';
-    r.locStocks.forEach(function(s){tr+='<td style="'+numTd+'">'+s+'</td>';});
+    activeVenues().forEach(function(v,i){
+      var s=r.locStocks[i];
+      var noteKey=r.p+'__'+v.id;
+      var memo=C().notes[noteKey]||'';
+      tr+='<td style="'+numTd+';cursor:pointer;position:relative" onclick="openMemo(\''+encodeURIComponent(r.p)+'\',\''+v.id+'\')" title="클릭하여 메모 입력">';
+      tr+=s;
+      if(memo){
+        tr+='<div style="font-size:10px;color:#888;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px">'+escHtml(memo)+'</div>';
+      } else {
+        tr+='<div style="font-size:10px;color:#ccc;margin-top:2px">✎</div>';
+      }
+      tr+='</td>';
+    });
     tr+='<td style="'+numTd+'">'+r.etc+'</td>';
     r.locSales.forEach(function(s){tr+='<td style="'+salesTd+';color:'+(s>0?'#c0392b':'#aaa')+'">'+s+'</td>';});
     tr+='</tr>';
@@ -1133,6 +1147,45 @@ function renderSummary(){
   tLocSales.forEach(function(s){html+='<td style="'+salesTd+';color:'+(s>0?'#c0392b':'#aaa')+'">'+s+'</td>';});
   html+='</tr>';
   document.getElementById('summary-table').innerHTML=html;
+}
+
+function openMemo(encodedProduct, locId){
+  var p=decodeURIComponent(encodedProduct);
+  var noteKey=p+'__'+locId;
+  var current=C().notes[noteKey]||'';
+  // 기존 팝업 제거
+  var old=document.getElementById('memo-popup');
+  if(old)old.remove();
+  // 팝업 생성
+  var popup=document.createElement('div');
+  popup.id='memo-popup';
+  popup.style.cssText='position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#fff;border:1px solid #ddd;border-radius:12px;padding:20px;z-index:9999;box-shadow:0 8px 32px rgba(0,0,0,0.18);min-width:280px;max-width:90vw';
+  var vname=locName(locId);
+  popup.innerHTML='<div style="font-size:13px;font-weight:600;color:#333;margin-bottom:12px">📝 메모 — '+escHtml(p)+' / '+escHtml(vname)+'</div>'
+    +'<textarea id="memo-input" style="width:100%;height:80px;border:1px solid #ddd;border-radius:8px;padding:8px;font-size:13px;resize:vertical;box-sizing:border-box;outline:none" placeholder="메모를 입력하세요...">'+escHtml(current)+'</textarea>'
+    +'<div style="display:flex;gap:8px;margin-top:12px;justify-content:flex-end">'
+    +'<button onclick="document.getElementById(\'memo-popup\').remove();document.getElementById(\'memo-overlay\').remove();" style="padding:7px 16px;border:1px solid #ddd;border-radius:8px;background:#f5f5f3;cursor:pointer;font-size:13px">취소</button>'
+    +'<button id="memo-save-btn" style="padding:7px 16px;border:none;border-radius:8px;background:#333;color:#fff;cursor:pointer;font-size:13px">저장</button>'
+    +'</div>';
+  // 배경 오버레이
+  var overlay=document.createElement('div');
+  overlay.id='memo-overlay';
+  overlay.style.cssText='position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.3);z-index:9998';
+  overlay.onclick=function(){popup.remove();overlay.remove();};
+  document.body.appendChild(overlay);
+  document.body.appendChild(popup);
+  var inp=document.getElementById('memo-input');
+  inp.focus();
+  inp.setSelectionRange(inp.value.length,inp.value.length);
+  document.getElementById('memo-save-btn').onclick=function(){
+    var val=document.getElementById('memo-input').value.trim();
+    if(val) C().notes[noteKey]=val;
+    else delete C().notes[noteKey];
+    saveState();
+    renderSummary();
+    popup.remove();
+    overlay.remove();
+  };
 }
 
 // ── 일별 현황 ──────────────────────────────────────────
