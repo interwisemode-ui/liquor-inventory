@@ -1442,22 +1442,20 @@ function renderSettings(){
       }).join('');
 
       // 포인터 이벤트 기반 드래그 (터치/마우스 모두 동작)
-      var dragging=null, dragFromIdx=-1, placeholder=null;
+      var dragging=null, placeholder=null, prodSnapshot=null;
       pl.querySelectorAll('.drag-handle').forEach(function(handle){
         handle.addEventListener('pointerdown',function(e){
           e.preventDefault();
           var row=handle.closest('.product-row');
-          dragFromIdx=parseInt(row.dataset.idx);
           dragging=row;
+          prodSnapshot=C().products.slice(); // 드래그 시작 시점 스냅샷
           var rect=row.getBoundingClientRect();
-          // 고스트 복제
           var ghost=row.cloneNode(true);
           ghost.id='drag-ghost';
-          ghost.style.cssText='position:fixed;left:'+rect.left+'px;top:'+rect.top+'px;width:'+rect.width+'px;opacity:0.7;pointer-events:none;z-index:9999;background:#e8f0fd;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.15)';
+          ghost.style.cssText='position:fixed;left:'+rect.left+'px;top:'+(e.clientY-rect.height/2)+'px;width:'+rect.width+'px;opacity:0.75;pointer-events:none;z-index:9999;background:#e8f0fd;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.18)';
           document.body.appendChild(ghost);
-          // 원본 자리 표시
           placeholder=document.createElement('div');
-          placeholder.style.cssText='height:'+rect.height+'px;background:#f0f4ff;border:2px dashed #b8d0f8;border-radius:8px;margin-bottom:6px';
+          placeholder.style.cssText='height:'+rect.height+'px;background:#f0f4ff;border:2px dashed #b8d0f8;border-radius:8px;box-sizing:border-box';
           row.parentNode.insertBefore(placeholder,row);
           row.style.display='none';
           handle.setPointerCapture(e.pointerId);
@@ -1466,36 +1464,32 @@ function renderSettings(){
           var ghost=document.getElementById('drag-ghost');
           if(!ghost||!dragging)return;
           ghost.style.top=(e.clientY-20)+'px';
-          // 어느 row 위에 있는지 계산
-          var rows=pl.querySelectorAll('.product-row:not([style*="display: none"])');
-          var inserted=false;
-          rows.forEach(function(r){
-            var rect=r.getBoundingClientRect();
-            if(e.clientY<rect.top+rect.height/2){
-              if(!inserted){pl.insertBefore(placeholder,r);inserted=true;}
-            }
-          });
-          if(!inserted)pl.appendChild(placeholder);
+          var rows=Array.from(pl.querySelectorAll('.product-row')).filter(function(r){return r.style.display!=='none';});
+          var target=null;
+          for(var i=0;i<rows.length;i++){
+            var rect=rows[i].getBoundingClientRect();
+            if(e.clientY<rect.top+rect.height/2){target=rows[i];break;}
+          }
+          if(target)pl.insertBefore(placeholder,target);
+          else pl.appendChild(placeholder);
         });
-        handle.addEventListener('pointerup',function(e){
+        handle.addEventListener('pointerup',function(){
           var ghost=document.getElementById('drag-ghost');
           if(ghost)ghost.remove();
-          if(!dragging){return;}
+          if(!dragging)return;
           dragging.style.display='';
-          if(placeholder){
-            pl.insertBefore(dragging,placeholder);
-            placeholder.remove();
-            placeholder=null;
-          }
-          // 현재 DOM 순서로 새 products 배열 구성
+          pl.insertBefore(dragging,placeholder);
+          placeholder.remove();
+          placeholder=null;
+          // DOM 순서 기준으로 스냅샷에서 이름 꺼내기
           var newOrder=[];
           pl.querySelectorAll('.product-row').forEach(function(r){
-            newOrder.push(C().products[parseInt(r.dataset.idx)]);
+            newOrder.push(prodSnapshot[parseInt(r.dataset.idx)]);
           });
           C().products=newOrder;
           dragging=null;
-          dragFromIdx=-1;
-          save();render();renderSettings();
+          prodSnapshot=null;
+          saveState();render();renderSettings();
         });
       });
     }
