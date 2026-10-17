@@ -1432,41 +1432,69 @@ function renderSettings(){
       pl.innerHTML=C().products.map(function(p,i){
         const isHidden=hidden.includes(p);
         const hideBtn='<button class="btn btn-sm" style="'+(isHidden?'color:#888;border-color:#d0d0c8':'color:#1a7a3c;border-color:#a8dfc0')+'" onclick="toggleHideProduct('+i+')">'+(isHidden?'○ Hidden':'✓ Visible')+'</button>';
-        return '<div class="product-row" draggable="true" data-idx="'+i+'" style="opacity:'+(isHidden?'0.5':'1')+';cursor:grab">'
-          +'<span style="color:#bbb;font-size:16px;padding:0 6px 0 2px;cursor:grab;user-select:none">⠿</span>'
+        return '<div class="product-row" data-idx="'+i+'" style="opacity:'+(isHidden?'0.5':'1')+';transition:background .1s">'
+          +'<span class="drag-handle" style="color:#bbb;font-size:18px;padding:0 8px 0 2px;cursor:grab;user-select:none;touch-action:none">⠿</span>'
           +'<input type="text" id="ri-'+i+'" value="'+p+'" style="flex:1;max-width:180px"/>'
           +'<button class="btn btn-sm" onclick="renameProduct('+i+')">Rename</button>'
           +hideBtn
           +'<button class="btn btn-sm btn-danger" onclick="deleteProduct('+i+')">Delete</button>'
           +'</div>';
       }).join('');
-      // 드래그 앤 드롭 이벤트
-      var dragSrc=null;
-      pl.querySelectorAll('.product-row').forEach(function(row){
-        row.addEventListener('dragstart',function(e){
-          dragSrc=this;
-          this.style.opacity='0.4';
-          e.dataTransfer.effectAllowed='move';
-        });
-        row.addEventListener('dragend',function(){
-          this.style.opacity='';
-          pl.querySelectorAll('.product-row').forEach(function(r){r.style.background='';});
-        });
-        row.addEventListener('dragover',function(e){
+
+      // 포인터 이벤트 기반 드래그 (터치/마우스 모두 동작)
+      var dragging=null, dragFromIdx=-1, placeholder=null;
+      pl.querySelectorAll('.drag-handle').forEach(function(handle){
+        handle.addEventListener('pointerdown',function(e){
           e.preventDefault();
-          e.dataTransfer.dropEffect='move';
-          pl.querySelectorAll('.product-row').forEach(function(r){r.style.background='';});
-          if(this!==dragSrc)this.style.background='#e8f0fd';
+          var row=handle.closest('.product-row');
+          dragFromIdx=parseInt(row.dataset.idx);
+          dragging=row;
+          var rect=row.getBoundingClientRect();
+          // 고스트 복제
+          var ghost=row.cloneNode(true);
+          ghost.id='drag-ghost';
+          ghost.style.cssText='position:fixed;left:'+rect.left+'px;top:'+rect.top+'px;width:'+rect.width+'px;opacity:0.7;pointer-events:none;z-index:9999;background:#e8f0fd;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,.15)';
+          document.body.appendChild(ghost);
+          // 원본 자리 표시
+          placeholder=document.createElement('div');
+          placeholder.style.cssText='height:'+rect.height+'px;background:#f0f4ff;border:2px dashed #b8d0f8;border-radius:8px;margin-bottom:6px';
+          row.parentNode.insertBefore(placeholder,row);
+          row.style.display='none';
+          handle.setPointerCapture(e.pointerId);
         });
-        row.addEventListener('drop',function(e){
-          e.preventDefault();
-          if(!dragSrc||dragSrc===this)return;
-          var fromIdx=parseInt(dragSrc.dataset.idx);
-          var toIdx=parseInt(this.dataset.idx);
-          // products 배열 순서 변경
-          var prods=C().products;
-          var item=prods.splice(fromIdx,1)[0];
-          prods.splice(toIdx,0,item);
+        handle.addEventListener('pointermove',function(e){
+          var ghost=document.getElementById('drag-ghost');
+          if(!ghost||!dragging)return;
+          ghost.style.top=(e.clientY-20)+'px';
+          // 어느 row 위에 있는지 계산
+          var rows=pl.querySelectorAll('.product-row:not([style*="display: none"])');
+          var inserted=false;
+          rows.forEach(function(r){
+            var rect=r.getBoundingClientRect();
+            if(e.clientY<rect.top+rect.height/2){
+              if(!inserted){pl.insertBefore(placeholder,r);inserted=true;}
+            }
+          });
+          if(!inserted)pl.appendChild(placeholder);
+        });
+        handle.addEventListener('pointerup',function(e){
+          var ghost=document.getElementById('drag-ghost');
+          if(ghost)ghost.remove();
+          if(!dragging){return;}
+          dragging.style.display='';
+          if(placeholder){
+            pl.insertBefore(dragging,placeholder);
+            placeholder.remove();
+            placeholder=null;
+          }
+          // 현재 DOM 순서로 새 products 배열 구성
+          var newOrder=[];
+          pl.querySelectorAll('.product-row').forEach(function(r){
+            newOrder.push(C().products[parseInt(r.dataset.idx)]);
+          });
+          C().products=newOrder;
+          dragging=null;
+          dragFromIdx=-1;
           save();render();renderSettings();
         });
       });
