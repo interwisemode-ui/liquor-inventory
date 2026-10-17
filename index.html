@@ -1126,11 +1126,10 @@ function renderSummary(){
       var noteKey=r.p+'__'+v.id;
       var memo=C().notes[noteKey]||'';
       tr+='<td style="'+numTd+';cursor:pointer;position:relative" onclick="openMemo(\''+encodeURIComponent(r.p)+'\',\''+v.id+'\')" title="클릭하여 메모 입력">';
-      tr+=s;
       if(memo){
-        tr+='<div style="font-size:10px;color:#888;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:80px">'+escHtml(memo)+'</div>';
+        tr+='<span style="font-size:13px;font-weight:600">'+s+'</span>&nbsp;<span style="font-size:10px;color:#1a5ccf;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:55px;display:inline-block;vertical-align:middle">'+escHtml(memo)+'</span>';
       } else {
-        tr+='<div style="font-size:10px;color:#ccc;margin-top:2px">✎</div>';
+        tr+='<span style="font-size:13px;font-weight:600">'+s+'</span>&nbsp;<span style="font-size:10px;color:#ccc">✎</span>';
       }
       tr+='</td>';
     });
