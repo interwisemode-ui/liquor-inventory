@@ -1104,7 +1104,7 @@ function renderSummary(){
   }
   const filtered=C().transfers.filter(t=>inRange(t.date,from,to));
   const rows=prods.map(function(p){
-    const bought=filtered.filter(t=>t.product===p&&t.type==='buy').reduce((a,t)=>a+t.qty,0);
+    const bought=filtered.filter(t=>t.product===p&&(t.type==='buy'||t.type==='direct')).reduce((a,t)=>a+t.qty,0);
     const etc=filtered.filter(t=>t.product===p&&t.type==='etc').reduce((a,t)=>a+t.qty,0);
     const c4s=getC4Stock(p);
     const locStocks=activeVenues().map(v=>getLocStock(p,v.id));
