@@ -1085,9 +1085,7 @@ function renderSummary(){
     else if(from) dateLabel=' ('+from.slice(5).replace('-','/')+'+)';
     else if(to) dateLabel=' (~'+to.slice(5).replace('-','/')+')';
 
-    hh+='<tr><th style="'+thFirstStyle+'">Item</th><th style="'+thStyle+';text-align:right">Buying</th><th style="'+thStyle+';text-align:right">'+locName('c4')+'</th>';
-    activeVenues().forEach(function(v){hh+='<th style="'+thStyle+';text-align:right">'+v.name+'</th>';});
-    hh+='<th style="'+thStyle+';text-align:right">ETC</th>';
+    hh+='<tr><th style="'+thFirstStyle+'">Item</th><th style="'+thStyle+';text-align:right">Buying</th>';
     activeVenues().forEach(function(v){
       if(dateLabel){
         hh+='<th style="'+thStyle+';text-align:right;line-height:1.3">'+v.name+' Sold<br><span style="font-size:10px;color:#aaa;font-weight:400">'+dateLabel.replace(/[()]/g,'').trim()+'</span></th>';
@@ -1095,6 +1093,9 @@ function renderSummary(){
         hh+='<th style="'+thStyle+';text-align:right">'+v.name+' Sold</th>';
       }
     });
+    hh+='<th style="'+thStyle+';text-align:right">Loss</th>';
+    hh+='<th style="'+thStyle+';text-align:right">'+locName('c4')+'</th>';
+    activeVenues().forEach(function(v){hh+='<th style="'+thStyle+';text-align:right">'+v.name+'</th>';});
     hh+='</tr>';
     head.innerHTML=hh;
   }
@@ -1120,7 +1121,14 @@ function renderSummary(){
   const numTd='text-align:right;padding:9px 10px;border-bottom:1px solid #f0f0e8;width:90px';
   const salesTd='text-align:right;padding:9px 10px;border-bottom:1px solid #f0f0e8;width:90px;font-weight:600';
   let html=rows.map(function(r){
-    let tr='<tr><td style="'+stickyTd+'"><b>'+r.p+'</b></td><td style="'+numTd+'">'+r.bought+'</td><td style="'+numTd+'">'+r.c4s+'</td>';
+    let tr='<tr><td style="'+stickyTd+'"><b>'+r.p+'</b></td><td style="'+numTd+'">'+r.bought+'</td>';
+    // Sold 먼저
+    r.locSales.forEach(function(s){tr+='<td style="'+salesTd+';color:'+(s>0?'#c0392b':'#aaa')+'">'+s+'</td>';});
+    // Loss
+    tr+='<td style="'+numTd+'">'+r.etc+'</td>';
+    // B4 Base
+    tr+='<td style="'+numTd+'">'+r.c4s+'</td>';
+    // Venue 재고 (메모 포함)
     activeVenues().forEach(function(v,i){
       var s=r.locStocks[i];
       var noteKey=r.p+'__'+v.id;
@@ -1133,17 +1141,16 @@ function renderSummary(){
       }
       tr+='</td>';
     });
-    tr+='<td style="'+numTd+'">'+r.etc+'</td>';
-    r.locSales.forEach(function(s){tr+='<td style="'+salesTd+';color:'+(s>0?'#c0392b':'#aaa')+'">'+s+'</td>';});
     tr+='</tr>';
     return tr;
   }).join('');
   html+='<tr style="border-top:2px solid #d0d0c8;background:#f5f5f3;font-weight:600">';
   html+='<td style="position:sticky;left:0;background:#f5f5f3;z-index:1;padding:9px 10px;width:120px">TOTAL</td>';
-  html+='<td style="'+numTd+'">'+tBought+'</td><td style="'+numTd+'">'+tC4s+'</td>';
-  tLoc.forEach(function(s){html+='<td style="'+numTd+'">'+s+'</td>';});
-  html+='<td style="'+numTd+'">'+tEtc+'</td>';
+  html+='<td style="'+numTd+'">'+tBought+'</td>';
   tLocSales.forEach(function(s){html+='<td style="'+salesTd+';color:'+(s>0?'#c0392b':'#aaa')+'">'+s+'</td>';});
+  html+='<td style="'+numTd+'">'+tEtc+'</td>';
+  html+='<td style="'+numTd+'">'+tC4s+'</td>';
+  tLoc.forEach(function(s){html+='<td style="'+numTd+'">'+s+'</td>';});
   html+='</tr>';
   document.getElementById('summary-table').innerHTML=html;
 }
