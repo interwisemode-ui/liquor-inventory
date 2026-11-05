@@ -1294,10 +1294,14 @@ function renderDailyBeer(year,month,prods,wrap){
   html+='</tr></thead><tbody>';
 
   const td=today();
+  var dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   for(var d=1;d<=daysInMonth;d++){
     var dateStr2=ds(d);
     var isToday=dateStr2===td;
-    html+='<tr style="'+(isToday?'background:#f0f4ff':'')+'"><td style="position:sticky;left:0;padding:8px 10px;border-bottom:1px solid #f0f0e8;border-right:1px solid #e0e0d8;white-space:nowrap;font-weight:'+(isToday?'600':'400')+';color:'+(isToday?'#1a5ccf':'#666')+';background:'+(isToday?'#e8eeff':'#fafaf8')+'">'+month+'/'+d+(isToday?' ●':'')+'</td>';
+    var dow=new Date(year,month-1,d).getDay();
+    var isFriSat=dow===5||dow===6;
+    var dateColor=isToday?'#1a5ccf':(isFriSat?'#c0392b':'#666');
+    html+='<tr style="'+(isToday?'background:#f0f4ff':'')+'"><td style="position:sticky;left:0;padding:8px 10px;border-bottom:1px solid #f0f0e8;border-right:1px solid #e0e0d8;white-space:nowrap;font-weight:'+(isToday?'600':'400')+';color:'+dateColor+';background:'+(isToday?'#e8eeff':'#fafaf8')+'">'+month+'/'+d+' <span style="font-size:10px">'+dayNames[dow]+'</span>'+(isToday?' ●':'')+'</td>';
     prods.forEach(function(p){
       venues.forEach(function(v){
         html+=cellHtml(p,v.id,d);
@@ -1417,10 +1421,14 @@ function renderDaily(){
   html+='<th style="position:sticky;left:0;top:0;background:#f5f5f3;padding:8px 10px;border-bottom:1px solid #e8e8e0;border-right:1px solid #e0e0d8;white-space:nowrap;z-index:3;font-size:12px;color:#888">Date</th>';
   prods.forEach(function(p){html+='<th style="position:sticky;top:0;padding:7px 8px;border-bottom:1px solid #e8e8e0;border-right:1px solid #f0f0e8;text-align:center;white-space:nowrap;font-size:12px;min-width:72px;background:#f5f5f3;z-index:2">'+p+'</th>';});
   html+='</tr></thead><tbody>';
+  var dayNames2=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   for(var d=1;d<=daysInMonth;d++){
     var dateStr2=ds(d);
     var isToday=dateStr2===td;
-    html+='<tr style="'+(isToday?'background:#f0f4ff':'')+'"><td style="position:sticky;left:0;padding:8px 10px;border-bottom:1px solid #f0f0e8;border-right:1px solid #e0e0d8;white-space:nowrap;font-weight:'+(isToday?'600':'400')+';color:'+(isToday?'#1a5ccf':'#666')+';background:'+(isToday?'#e8eeff':'#fafaf8')+'">'+month+'/'+d+(isToday?' ●':'')+'</td>';
+    var dow2=new Date(year,month-1,d).getDay();
+    var isFriSat2=dow2===5||dow2===6;
+    var dateColor2=isToday?'#1a5ccf':(isFriSat2?'#c0392b':'#666');
+    html+='<tr style="'+(isToday?'background:#f0f4ff':'')+'"><td style="position:sticky;left:0;padding:8px 10px;border-bottom:1px solid #f0f0e8;border-right:1px solid #e0e0d8;white-space:nowrap;font-weight:'+(isToday?'600':'400')+';color:'+dateColor2+';background:'+(isToday?'#e8eeff':'#fafaf8')+'">'+month+'/'+d+' <span style="font-size:10px">'+dayNames2[dow2]+'</span>'+(isToday?' ●':'')+'</td>';
     prods.forEach(function(p){
       var stock=stockOnDay(p,d);
       var inDetails=inDetailsOnDay(p,d);
