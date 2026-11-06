@@ -622,6 +622,7 @@ tr:hover td{background:rgba(255,255,255,.018);}
             <button class="btn btn-sm" onclick="var f=document.getElementById('payrollFile');f.value='';f.click()" style="background:rgba(96,165,250,0.15);color:var(--accent2);border:1px solid rgba(96,165,250,0.3);white-space:nowrap;">📊 인센티브/가불 업로드</button>
             <input type="file" id="payrollFile" accept=".xlsx,.xls" style="display:none" onchange="uploadPayroll(this)">
             <button class="btn btn-sm" onclick="downloadPayroll()" style="background:rgba(52,211,153,0.15);color:var(--green);border:1px solid rgba(52,211,153,0.3);white-space:nowrap;">⬇ 엑셀</button>
+            <button class="btn btn-sm" onclick="fixStaffNameAllMonths()" style="background:rgba(251,191,36,0.15);color:var(--yellow);border:1px solid rgba(251,191,36,0.3);white-space:nowrap;" title="출근부·기본급에 옛 이름이 남아있을 때 모든 달을 새 이름으로 맞춤">🔗 이름 통합</button>
           </div>
         </div>
         <div style="font-size:11px;color:var(--text3);margin-bottom:8px;">기본급·근무일수 자동 · 인센티브/가불은 칸에 입력하거나 엑셀 업로드 · Payable = 기본급×(근무일/30) · Total = Payable+인센−가불</div>
@@ -2847,6 +2848,41 @@ function renameStaff(oldName){
   renderManageGrid(); renderPickers();
   showToast(`✓ ${oldName} → ${nn} 변경됨 (모든 달 출근부·기본급 포함)`);
 }
+window.fixStaffNameAllMonths=function(){
+  const oldRaw=prompt('출근부/급여에 남아있는 "옛 이름"을 입력하세요 (대소문자 무관):');
+  if(!oldRaw||!oldRaw.trim())return;
+  const oldName=oldRaw.trim().toUpperCase();
+  const newRaw=prompt(`"${oldName}" → 바꿀 "새 이름"을 입력하세요:`, oldName);
+  if(!newRaw||!newRaw.trim())return;
+  const nn=newRaw.trim().toUpperCase();
+  if(nn===oldName){showToast('옛 이름과 새 이름이 같아요');return;}
+  showToast('🔗 모든 달 이름 통합 중...');
+  Promise.all([get(ref(db,'records')),get(ref(db,'attendance')),get(ref(db,'config/baseSalary')),get(ref(db,'config/payroll'))]).then(([recSnap,attSnap,bsSnap,pySnap])=>{
+    const updates={};let nAtt=0,nRec=0,nBs=0,nPy=0;
+    if(recSnap&&recSnap.exists())recSnap.forEach(child=>{
+      const r=child.val();
+      if(r.bookers&&r.bookers.includes(oldName)){updates[`records/${child.key}/bookers`]=r.bookers.map(b=>b===oldName?nn:b);nRec++;}
+      if(r.staff&&r.staff.includes(oldName)){updates[`records/${child.key}/staff`]=r.staff.map(b=>b===oldName?nn:b);nRec++;}
+      if(r.staff2&&r.staff2.includes(oldName)){updates[`records/${child.key}/staff2`]=r.staff2.map(b=>b===oldName?nn:b);nRec++;}
+    });
+    if(attSnap&&attSnap.exists())attSnap.forEach(ms=>{
+      const mk=ms.key;const staff=(ms.val()||{}).staff||[];
+      staff.forEach((s,idx)=>{if(((s&&s.name)||'').toUpperCase()===oldName){updates[`attendance/${mk}/staff/${idx}/name`]=nn;nAtt++;}});
+    });
+    if(bsSnap&&bsSnap.exists()){const bs=bsSnap.val()||{};if(bs[oldName]!==undefined){updates[`config/baseSalary/${nn}`]=Object.assign({},bs[nn]||{},bs[oldName]);updates[`config/baseSalary/${oldName}`]=null;nBs++;}}
+    if(pySnap&&pySnap.exists()){const py=pySnap.val()||{};Object.keys(py).forEach(mk=>{if(py[mk]&&py[mk][oldName]!==undefined){updates[`config/payroll/${mk}/${nn}`]=Object.assign({},py[mk][nn]||{},py[mk][oldName]);updates[`config/payroll/${mk}/${oldName}`]=null;nPy++;}});}
+    let listChanged=false;
+    const si=staffList.indexOf(oldName);
+    if(si>=0){ if(!staffList.includes(nn))staffList[si]=nn; else staffList.splice(si,1); listChanged=true; }
+    const mi=managerList.indexOf(oldName);
+    if(mi>=0){ if(!managerList.includes(nn))managerList[mi]=nn; else managerList.splice(mi,1); listChanged=true; }
+    if(listChanged)saveStaffDB();
+    if(!Object.keys(updates).length&&!listChanged){showToast(`"${oldName}" 데이터를 못 찾았어요 (이름을 다시 확인하세요)`);return;}
+    const done=()=>{try{renderPayroll();renderManageGrid();renderPickers();}catch(_){}showToast(`✓ 통합 완료 → ${nn} (출근부 ${nAtt}곳·기록 ${nRec}곳·기본급 ${nBs}·급여 ${nPy}개월)`);};
+    if(Object.keys(updates).length)update(ref(db),updates).then(done).catch(e=>showToast('⚠ 실패: '+((e&&e.message)||e)));
+    else done();
+  }).catch(e=>showToast('⚠ 불러오기 실패: '+((e&&e.message)||e)));
+};
 
 function removeStaff(name){
   _pdid=name;
