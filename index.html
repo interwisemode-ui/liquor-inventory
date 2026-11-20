@@ -241,6 +241,19 @@ tr:hover td{background:#fafaf8}
   </div>
 </div>
 
+<!-- 메모 모달 -->
+<div id="modal-memo" class="modal-bg" style="display:none">
+  <div class="modal-box">
+    <div style="font-size:16px;font-weight:600;margin-bottom:6px">메모</div>
+    <div id="memo-modal-desc" style="font-size:13px;color:#888;margin-bottom:12px"></div>
+    <textarea id="memo-input" rows="4" style="width:100%;box-sizing:border-box;padding:8px;border:1px solid #ddd;border-radius:6px;font-size:13px;resize:vertical;margin-bottom:16px"></textarea>
+    <div style="display:flex;gap:8px;justify-content:flex-end">
+      <button class="btn" onclick="closeModal('memo')">취소</button>
+      <button class="btn btn-primary" onclick="saveMemo()">저장</button>
+    </div>
+  </div>
+</div>
+
 <div id="toast"></div>
 
 <!-- Firebase -->
@@ -402,7 +415,28 @@ window._onFbData=function(data,isFirst){
 };
 
 // ── UI 헬퍼 ───────────────────────────────────────────
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function showToast(msg){const el=document.getElementById('toast');el.textContent=msg;el.style.display='block';setTimeout(()=>el.style.display='none',2400);}
+
+// ── 메모 ──────────────────────────────────────────────
+var memoTarget=null;
+function openMemoModal(product,locId){
+  memoTarget={product,locId};
+  var locDisplay=locId==='c4'?locName('c4'):locName(locId);
+  document.getElementById('memo-modal-desc').textContent=product+' · '+locDisplay;
+  var memo=(C().memos&&C().memos[product]&&C().memos[product][locId])||'';
+  document.getElementById('memo-input').value=memo;
+  openModal('memo');
+  setTimeout(()=>document.getElementById('memo-input').focus(),100);
+}
+function saveMemo(){
+  if(!memoTarget)return;
+  var val=document.getElementById('memo-input').value.trim();
+  if(!C().memos)C().memos={};
+  if(!C().memos[memoTarget.product])C().memos[memoTarget.product]={};
+  C().memos[memoTarget.product][memoTarget.locId]=val;
+  saveState();render();closeModal('memo');showToast(val?'메모 저장됨':'메모 삭제됨');
+}
 function openModal(id){
   const el=document.getElementById('modal-'+id);
   if(el){el.classList.add('open');el.style.display='flex';}
@@ -1117,7 +1151,7 @@ function renderSummary(){
   }
   const filtered=C().transfers.filter(t=>inRange(t.date,from,to));
   const rows=prods.map(function(p){
-    const bought=filtered.filter(t=>t.product===p&&t.type==='buy').reduce((a,t)=>a+t.qty,0);
+    const bought=filtered.filter(t=>t.product===p&&(t.type==='buy'||t.type==='direct')).reduce((a,t)=>a+t.qty,0);
     const etc=filtered.filter(t=>t.product===p&&t.type==='etc').reduce((a,t)=>a+t.qty,0);
     const c4s=getC4Stock(p);
     const locStocks=activeVenues().map(v=>getLocStock(p,v.id));
@@ -1136,8 +1170,22 @@ function renderSummary(){
     let tr='<tr><td style="'+stickyTd+'"><b>'+r.p+'</b></td><td style="'+numTd+'">'+r.bought+'</td>';
     r.locSales.forEach(function(s){tr+='<td style="'+salesTd+';color:'+(s>0?'#c0392b':'#aaa')+'">'+s+'</td>';});
     tr+='<td style="'+numTd+'">'+r.etc+'</td>';
-    tr+='<td style="'+numTd+'">'+r.c4s+'</td>';
-    r.locStocks.forEach(function(s){tr+='<td style="'+numTd+'">'+s+'</td>';});
+    // B4 Base 셀 (메모 포함)
+    var c4memo=(C().memos&&C().memos[r.p]&&C().memos[r.p]['c4'])||'';
+    tr+='<td style="'+numTd+';position:relative"><div style="display:flex;align-items:center;justify-content:flex-end;gap:4px">';
+    tr+=r.c4s;
+    tr+='<span onclick="openMemoModal(\''+escHtml(r.p)+'\',\'c4\')" style="cursor:pointer;font-size:11px;color:#bbb;flex-shrink:0" title="메모">✎</span></div>';
+    if(c4memo)tr+='<div style="font-size:10px;color:#1a5ccf;text-align:right;margin-top:1px">'+escHtml(c4memo)+'</div>';
+    tr+='</td>';
+    // Venue 재고 셀 (메모 포함)
+    activeVenues().forEach(function(v,i){
+      var vmemo=(C().memos&&C().memos[r.p]&&C().memos[r.p][v.id])||'';
+      tr+='<td style="'+numTd+';position:relative"><div style="display:flex;align-items:center;justify-content:flex-end;gap:4px">';
+      tr+=r.locStocks[i];
+      tr+='<span onclick="openMemoModal(\''+escHtml(r.p)+'\',\''+v.id+'\')" style="cursor:pointer;font-size:11px;color:#bbb;flex-shrink:0" title="메모">✎</span></div>';
+      if(vmemo)tr+='<div style="font-size:10px;color:#1a5ccf;text-align:right;margin-top:1px">'+escHtml(vmemo)+'</div>';
+      tr+='</td>';
+    });
     tr+='</tr>';
     return tr;
   }).join('');
@@ -1244,11 +1292,15 @@ function renderDailyBeer(year,month,prods,wrap){
   });
   html+='</tr></thead><tbody>';
 
+  var dayNames=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const td=today();
   for(var d=1;d<=daysInMonth;d++){
     var dateStr2=ds(d);
     var isToday=dateStr2===td;
-    html+='<tr style="'+(isToday?'background:#f0f4ff':'')+'"><td style="position:sticky;left:0;padding:8px 10px;border-bottom:1px solid #f0f0e8;border-right:1px solid #e0e0d8;white-space:nowrap;font-weight:'+(isToday?'600':'400')+';color:'+(isToday?'#1a5ccf':'#666')+';background:'+(isToday?'#e8eeff':'#fafaf8')+'">'+month+'/'+d+(isToday?' ●':'')+'</td>';
+    var dow=new Date(year,month-1,d).getDay();
+    var isFriSat=dow===5||dow===6;
+    var dateColor=isToday?'#1a5ccf':(isFriSat?'#c0392b':'#666');
+    html+='<tr style="'+(isToday?'background:#f0f4ff':'')+'"><td style="position:sticky;left:0;padding:8px 10px;border-bottom:1px solid #f0f0e8;border-right:1px solid #e0e0d8;white-space:nowrap;font-weight:'+(isToday?'600':'400')+';color:'+dateColor+';background:'+(isToday?'#e8eeff':'#fafaf8')+'">'+month+'/'+d+' <span style="font-size:10px">'+dayNames[dow]+'</span>'+(isToday?' ●':'')+'</td>';
     prods.forEach(function(p){
       venues.forEach(function(v){
         html+=cellHtml(p,v.id,d);
@@ -1363,6 +1415,7 @@ function renderDaily(){
     return details;
   }
   function cellBg(s){if(s<=0)return'#fff5f5';if(s<=3)return'#fffbf0';return'#f0faf4';}
+  var dayNames2=['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
   const td=today();
   var html='<table style="font-size:11px;border-collapse:collapse;width:100%;table-layout:fixed"><thead><tr>';
   html+='<th style="position:sticky;left:0;top:0;background:#f5f5f3;padding:8px 8px;border-bottom:1px solid #e8e8e0;border-right:1px solid #e0e0d8;white-space:nowrap;z-index:3;font-size:11px;color:#888;width:72px">Date</th>';
@@ -1371,7 +1424,10 @@ function renderDaily(){
   for(var d=1;d<=daysInMonth;d++){
     var dateStr2=ds(d);
     var isToday=dateStr2===td;
-    html+='<tr style="'+(isToday?'background:#f0f4ff':'')+'"><td style="position:sticky;left:0;padding:8px 10px;border-bottom:1px solid #f0f0e8;border-right:1px solid #e0e0d8;white-space:nowrap;font-weight:'+(isToday?'600':'400')+';color:'+(isToday?'#1a5ccf':'#666')+';background:'+(isToday?'#e8eeff':'#fafaf8')+'">'+month+'/'+d+(isToday?' ●':'')+'</td>';
+    var dow2=new Date(year,month-1,d).getDay();
+    var isFriSat2=dow2===5||dow2===6;
+    var dateColor2=isToday?'#1a5ccf':(isFriSat2?'#c0392b':'#666');
+    html+='<tr style="'+(isToday?'background:#f0f4ff':'')+'"><td style="position:sticky;left:0;padding:8px 10px;border-bottom:1px solid #f0f0e8;border-right:1px solid #e0e0d8;white-space:nowrap;font-weight:'+(isToday?'600':'400')+';color:'+dateColor2+';background:'+(isToday?'#e8eeff':'#fafaf8')+'">'+month+'/'+d+' <span style="font-size:10px">'+dayNames2[dow2]+'</span>'+(isToday?' ●':'')+'</td>';
     prods.forEach(function(p){
       var stock=stockOnDay(p,d);
       var inDetails=inDetailsOnDay(p,d);
